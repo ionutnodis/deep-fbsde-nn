@@ -43,10 +43,24 @@ from src.utils import get_device
 class XVAParams:
     """Mock class to allow unpickling XVA models."""
 
-    dimension: int = 100
-    r: float = 0.03
-    sigma: float = 0.2
+    # Underlying
+    S0: float = 100.0
+    K: float = 100.0
     T: float = 1.0
+    r: float = 0.05
+    sigma: float = 0.2
+
+    # Credit parameters
+    lambda_c: float = 0.02
+    lambda_b: float = 0.01
+    R_c: float = 0.4
+    R_b: float = 0.4
+
+    # Funding parameters
+    r_f: float = 0.06
+
+    # Option type
+    option_type: str = "call"
 
 
 # Inject into main module scope so torch.load can find it
@@ -129,8 +143,8 @@ def generate_paths_and_values(
 
     try:
         if eq.has_exact_solution():
-            Y_exact = torch.zeros(n_paths, n_steps + 1, device=device)
-    except:
+            Y_exact = torch.full((n_paths, n_steps + 1), float("nan"), device=device)
+    except Exception:
         pass
 
     X = X0.clone()
@@ -228,14 +242,20 @@ def compute_price_vs_spot(solver, S_min=0.5, S_max=1.5, n_points=50):
 
 
 # --- PLOTTING FUNCTIONS ---
-
-
 def _get_iterations(history: Dict) -> np.ndarray:
     iterations = history.get("iterations")
     if iterations:
         return np.array(iterations)
     losses = history.get("losses", [])
     return np.arange(len(losses))
+
+
+def _to_numpy(values):
+    if isinstance(values, np.ndarray):
+        return values
+    if torch.is_tensor(values):
+        return values.detach().cpu().numpy()
+    return np.asarray(values)
 
 
 def plot_learning_history(history, title, save_path, exact_y0: Optional[float] = None):
@@ -296,14 +316,15 @@ def plot_trajectories_with_terminal(data, title, save_path):
     plt.figure(figsize=(8, 5))
 
     n_show = min(10, Y.shape[0])
+    has_exact = Y_exact is not None and np.isfinite(Y_exact).any()
     for i in range(n_show):
         c = plt.cm.tab10(i % 10)
         plt.plot(t, Y[i], "-", color=c, alpha=0.6, linewidth=1.0)
-        if Y_exact is not None and Y_exact[i].sum() != 0:
+        if has_exact and np.isfinite(Y_exact[i]).any():
             plt.plot(t, Y_exact[i], "--", color=c, alpha=0.4)
 
     plt.plot([], [], "k-", label="Learned")
-    if Y_exact is not None:
+    if has_exact:
         plt.plot([], [], "k--", label="Exact")
     if terminal_payoff is not None:
         plt.scatter(
@@ -316,7 +337,7 @@ def plot_trajectories_with_terminal(data, title, save_path):
         )
         plt.scatter(
             np.full(n_show, t[-1]),
-            Y[:n_show, -1],
+            _to_numpy(Y[:n_show, -1]),
             marker="o",
             color="tab:orange",
             alpha=0.7,
@@ -338,7 +359,7 @@ def plot_terminal_fit(data, title, save_path):
     if terminal_payoff is None:
         return
 
-    y_pred = data["Y_learned"][:, -1]
+    y_pred = _to_numpy(data["Y_learned"][:, -1])
     error = y_pred - terminal_payoff
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
@@ -575,9 +596,123 @@ def plot_price_surface_heatmap(
     plt.close()
 
 
+def _strip_wrapper_prefix(
+    state_dict: Dict[str, torch.Tensor],
+) -> Dict[str, torch.Tensor]:
+    if not state_dict:
+        return state_dict
+    if any(k.startswith("net.") for k in state_dict.keys()):
+        return {k.replace("net.", "", 1): v for k, v in state_dict.items()}
+    return state_dict
+
+
+def _infer_naisnet_architecture(
+    state_dict: Dict[str, torch.Tensor],
+) -> Tuple[int, int, int]:
+    clean_state = _strip_wrapper_prefix(state_dict)
+    first_weight = clean_state.get("first_layer.weight")
+    output_weight = clean_state.get("output_layer.weight")
+    if first_weight is None or output_weight is None:
+        raise ValueError("Missing NAISNet weights for architecture inference.")
+
+    hidden_dim, input_dim = first_weight.shape
+    _, hidden_dim_out = output_weight.shape
+    if hidden_dim_out != hidden_dim:
+        hidden_dim = hidden_dim_out
+
+    nais_weights = [
+        k
+        for k in clean_state.keys()
+        if k.startswith("nais_layers.") and k.endswith(".weight")
+    ]
+    num_layers = len(nais_weights) + 1
+    return input_dim, hidden_dim, num_layers
+
+
+def _generate_xva_paths(solver, n_paths: int, n_steps: int) -> Dict[str, np.ndarray]:
+    t, S, _ = solver.simulate_paths(n_paths, n_steps)
+    Y_vals = []
+    solver.net.eval()
+    with torch.no_grad():
+        for i, t_i in enumerate(t):
+            t_batch = torch.full((n_paths, 1), t_i.item(), device=solver.device)
+            S_batch = S[:, i : i + 1]
+            Y_i = solver._forward(t_batch, S_batch).squeeze()
+            Y_vals.append(Y_i)
+
+    Y_learned = torch.stack(Y_vals, dim=1)
+    terminal_payoff = solver.payoff(S[:, -1]).detach().squeeze()
+
+    return {
+        "t": t.cpu().numpy(),
+        "Y_learned": Y_learned.cpu().numpy(),
+        "Y_exact": None,
+        "terminal_payoff": terminal_payoff.cpu().numpy(),
+    }
+
+
+def load_and_visualize_xva(args):
+    device = get_device(args.device)
+    model_path = Path(args.model)
+
+    print(f"Visualizing Model: {model_path.name}")
+    print("Type: XVA")
+
+    print(f"Loading {args.model}...")
+    try:
+        checkpoint = torch.load(args.model, map_location=device, weights_only=False)
+    except Exception as exc:
+        print(f"FATAL loading error: {exc}")
+        return
+
+    if not isinstance(checkpoint, dict) or "model" not in checkpoint:
+        print("FATAL loading error: Expected XVA checkpoint with 'model' key.")
+        return
+
+    state_dict = checkpoint["model"]
+    try:
+        _, hidden_dim, num_layers = _infer_naisnet_architecture(state_dict)
+    except Exception as exc:
+        print(f"FATAL loading error: {exc}")
+        return
+
+    try:
+        from experiments.exp_xva import (
+            XVABSDESolver,
+            XVAParams as XVAParamsFull,
+            plot_xva_results,
+        )
+    except Exception as exc:
+        print(f"FATAL loading error: {exc}")
+        return
+
+    params = checkpoint.get("params") or XVAParamsFull()
+    if not isinstance(params, XVAParamsFull):
+        try:
+            params = XVAParamsFull(**vars(params))
+        except Exception:
+            params = XVAParamsFull()
+
+    solver = XVABSDESolver(
+        params=params,
+        hidden_dim=hidden_dim,
+        num_layers=num_layers,
+        device=str(device),
+    )
+    solver.net.load_state_dict(state_dict)
+    solver.losses = checkpoint.get("losses", [])
+    solver.prices = checkpoint.get("prices", [])
+    solver.current_iteration = checkpoint.get("iteration", len(solver.losses))
+
+    save_dir = Path(args.save_dir) / "xva"
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    plot_xva_results(solver, save_dir=str(save_dir))
+
+    print("Done.")
+
+
 # --- MAIN LOGIC ---
-
-
 def load_and_visualize(args):
     device = get_device(args.device)
     model_path = Path(args.model)
@@ -606,25 +741,12 @@ def load_and_visualize(args):
     print(f"Visualizing Model: {model_path.name}")
     print(f"Type: {args.equation.upper()}, Dim: {args.dim}")
 
+    if args.equation == "xva":
+        load_and_visualize_xva(args)
+        return
+
     # 3. Setup Equation & Network
     eq = get_equation(args.equation, args.dim, device)
-    input_dim = args.dim + 1
-
-    # Architecture inference
-    if args.equation in ["bs", "hjb"]:
-        activation = "silu"
-    else:
-        activation = "sine"
-
-    raw_net = NAISNet(
-        input_dim=input_dim,
-        hidden_dim=256,
-        output_dim=1,
-        num_layers=4,
-        activation=activation,
-    )
-
-    solver = StandardSolver(eq, raw_net, SolverConfig(), device=device)
 
     # 4. Robust Loading
     print(f"Loading {args.model}...")
@@ -634,10 +756,40 @@ def load_and_visualize(args):
 
         if isinstance(checkpoint, dict) and "model" in checkpoint:
             state_dict = checkpoint["model"]
-            solver.training_history = checkpoint.get("history", {})
+            training_history = checkpoint.get("history", {})
         else:
             state_dict = checkpoint
-            solver.training_history = {}
+            training_history = {}
+
+        # Infer architecture from checkpoint to avoid shape mismatches.
+        try:
+            input_dim, hidden_dim, num_layers = _infer_naisnet_architecture(state_dict)
+            inferred_dim = input_dim - 1
+            if inferred_dim != args.dim:
+                print(f"Overriding dim from {args.dim} to {inferred_dim} (checkpoint).")
+                args.dim = inferred_dim
+                eq = get_equation(args.equation, args.dim, device)
+        except Exception:
+            input_dim = args.dim + 1
+            hidden_dim = 256
+            num_layers = 4
+
+        # Architecture inference
+        if args.equation == "hjb":
+            activation = "silu"
+        else:
+            activation = "sine"
+
+        raw_net = NAISNet(
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
+            output_dim=1,
+            num_layers=num_layers,
+            activation=activation,
+        )
+
+        solver = StandardSolver(eq, raw_net, SolverConfig(), device=device)
+        solver.training_history = training_history
 
         # Handle Wrappers
         is_wrapped = any(k.startswith("net.") for k in state_dict.keys())
@@ -678,7 +830,9 @@ def load_and_visualize(args):
 
     # Trajectories
     print("Generating trajectories...")
-    path_data = generate_paths_and_values(solver, n_paths=args.n_paths)
+    path_data = generate_paths_and_values(
+        solver, n_paths=args.n_paths, n_steps=args.n_steps
+    )
     plot_trajectories_with_terminal(
         path_data,
         f"{args.equation.upper()} Sample Paths (D={args.dim})",
@@ -767,6 +921,7 @@ if __name__ == "__main__":
     parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--save-dir", type=str, default="results/figures")
     parser.add_argument("--n-paths", type=int, default=50)
+    parser.add_argument("--n-steps", type=int, default=50)
     parser.add_argument(
         "--benchmark-json",
         type=str,
