@@ -48,7 +48,7 @@ import argparse
 from typing import Tuple, Optional, Dict
 from dataclasses import dataclass
 
-from src.networks import NAISNet
+from deep_fbsde_nn.networks import NAISNet
 
 
 # =============================================================================

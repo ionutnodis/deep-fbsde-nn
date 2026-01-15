@@ -60,10 +60,10 @@ def get_device(device_str: str = "auto") -> torch.device:
 
 
 try:
-    from src.networks import NAISNet
-    from src.equations import BlackScholesBarenblattEquation, BlackScholesEquation
-    from src.equations.hjb import HJBEquation
-    from src.solvers import StandardSolver, SolverConfig
+    from deep_fbsde_nn.networks import NAISNet
+    from deep_fbsde_nn.equations import BlackScholesBarenblattEquation, BlackScholesEquation
+    from deep_fbsde_nn.equations.hjb import HJBEquation
+    from deep_fbsde_nn.solvers import StandardSolver, SolverConfig
 
     HAS_PROJECT_MODULES = True
 except ImportError as e:

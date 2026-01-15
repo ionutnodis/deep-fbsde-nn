@@ -25,17 +25,17 @@ from dataclasses import dataclass
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Imports
-from src.networks import NAISNet
-from src.networks.wrapper import BlackScholesWrapper
-from src.equations import (
+from deep_fbsde_nn.networks import NAISNet
+from deep_fbsde_nn.networks.wrapper import BlackScholesWrapper
+from deep_fbsde_nn.equations import (
     BlackScholesBarenblattEquation,
     BlackScholesEquation,
     HJBEquation,
     BaseEquation,
     EquationConfig,
 )
-from src.solvers import StandardSolver, SolverConfig
-from src.utils import get_device
+from deep_fbsde_nn.solvers import StandardSolver, SolverConfig
+from deep_fbsde_nn.utils import get_device
 
 
 # --- MOCK CLASSES FOR UNSAFE PICKLE LOADING ---
