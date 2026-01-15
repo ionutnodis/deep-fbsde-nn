@@ -31,10 +31,10 @@ from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.networks import NAISNet
-from src.equations.hjb import HJBEquation
-from src.solvers import StandardSolver, SolverConfig
-from src.utils import get_device
+from deep_fbsde_nn.networks import NAISNet
+from deep_fbsde_nn.equations.hjb import HJBEquation
+from deep_fbsde_nn.solvers import StandardSolver, SolverConfig
+from deep_fbsde_nn.utils import get_device
 
 
 def run_hjb_experiment(

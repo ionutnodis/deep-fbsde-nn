@@ -23,7 +23,14 @@ Project: CQF Final Project (January 2026)
 __version__ = "1.0.0"
 __author__ = "Ionut Nodis"
 
-from src import networks
-from src import equations
-from src import solvers
-from src import utils
+from . import networks
+from . import equations
+from . import solvers
+from . import utils
+
+__all__ = [
+    "networks",
+    "equations",
+    "solvers",
+    "utils",
+]

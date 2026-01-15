@@ -32,10 +32,10 @@ import json
 from datetime import datetime
 from typing import List, Dict
 
-from src.networks import NAISNet, FeedForwardNet
-from src.equations import BlackScholesBarenblattEquation
-from src.solvers import StandardSolver, SolverConfig
-from src.utils import get_device
+from deep_fbsde_nn.networks import NAISNet, FeedForwardNet
+from deep_fbsde_nn.equations import BlackScholesBarenblattEquation
+from deep_fbsde_nn.solvers import StandardSolver, SolverConfig
+from deep_fbsde_nn.utils import get_device
 from experiments.config import ARCH_CONFIG
 
 

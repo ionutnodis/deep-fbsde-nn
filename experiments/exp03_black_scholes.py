@@ -35,10 +35,10 @@ import time
 import json
 from datetime import datetime
 
-from src.networks import NAISNet
-from src.equations import BlackScholesEquation
-from src.solvers import StandardSolver, SolverConfig
-from src.utils import get_device
+from deep_fbsde_nn.networks import NAISNet
+from deep_fbsde_nn.equations import BlackScholesEquation
+from deep_fbsde_nn.solvers import StandardSolver, SolverConfig
+from deep_fbsde_nn.utils import get_device
 from experiments.config import BS_CONFIG
 
 
