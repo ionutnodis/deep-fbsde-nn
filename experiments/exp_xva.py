@@ -56,22 +56,30 @@ from src.networks import NAISNet
 # =============================================================================
 
 
-def black_scholes_call(S: float, K: float, T: float, r: float, sigma: float) -> float:
-    """Analytical Black-Scholes call price (no XVA)."""
+def black_scholes_call(
+    S: np.ndarray, K: float, T: float, r: float, sigma: float
+) -> np.ndarray:
+    """Analytical Black-Scholes call price (no XVA). Vectorized."""
+    S = np.atleast_1d(S)
     if T <= 0:
-        return max(S - K, 0)
+        return np.maximum(S - K, 0)
     d1 = (np.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
-    return S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
+    result = S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
+    return result if result.shape[0] > 1 else result[0]
 
 
-def black_scholes_put(S: float, K: float, T: float, r: float, sigma: float) -> float:
-    """Analytical Black-Scholes put price (no XVA)."""
+def black_scholes_put(
+    S: np.ndarray, K: float, T: float, r: float, sigma: float
+) -> np.ndarray:
+    """Analytical Black-Scholes put price (no XVA). Vectorized."""
+    S = np.atleast_1d(S)
     if T <= 0:
-        return max(K - S, 0)
+        return np.maximum(K - S, 0)
     d1 = (np.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
-    return K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
+    result = K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
+    return result if result.shape[0] > 1 else result[0]
 
 
 def classical_xva_monte_carlo(
@@ -111,7 +119,7 @@ def classical_xva_monte_carlo(
         Z = np.random.randn(n_paths)
         S[:, i + 1] = S[:, i] * np.exp((r - 0.5 * sigma**2) * dt + sigma * sqrt_dt * Z)
 
-    # Compute option values along paths using BS formula
+    # Compute option values along paths using BS formula (vectorized)
     V = np.zeros((n_paths, n_steps + 1))
 
     bs_func = black_scholes_call if option_type == "call" else black_scholes_put
@@ -121,8 +129,7 @@ def classical_xva_monte_carlo(
         tau = T - t_j  # time to maturity
 
         if tau > 1e-10:
-            for i in range(n_paths):
-                V[i, j] = bs_func(S[i, j], K, tau, r, sigma)
+            V[:, j] = bs_func(S[:, j], K, tau, r, sigma)
         else:
             # At maturity
             if option_type == "call":
@@ -392,8 +399,9 @@ class XVABSDESolver:
 
         # Forward propagate the BSDE
         for i in range(n_steps):
-            # BSDE dynamics: dY = (r*Y - f(Y))dt + Z*dW
-            drift = (p.r * Y - self.xva_driver(Y)) * dt
+            # BSDE dynamics: dY = (r*Y + f(Y))dt + Z*dW
+            # f(Y) > 0 represents costs, which should reduce the initial price
+            drift = (p.r * Y + self.xva_driver(Y)) * dt
             diffusion = Z * dW[:, i]
             Y_new = Y + drift + diffusion
 
@@ -814,32 +822,40 @@ def plot_xva_results(solver: XVABSDESolver, save_dir: str = "results/figures"):
     # ==========================================================================
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
 
-    # Compute CVA, DVA, FVA contributions along spot
-    n_paths_mc = 10000
-    n_steps_mc = 50
-    dt = p.T / n_steps_mc
+    # Compute CVA, DVA, FVA contributions along spot using proper MC
+    # Use fewer paths/steps for plotting (full accuracy not needed for visualization)
+    n_paths_mc = 5000
+    n_steps_mc = 25
 
     cva_by_spot = []
     dva_by_spot = []
     fva_by_spot = []
 
-    S_test = np.linspace(70, 130, 20)
+    S_test = np.linspace(70, 130, 15)  # Fewer points for speed
 
+    print("Computing XVA components across spot levels...")
     for S0_test in S_test:
-        # Simple approximation: scale by moneyness
-        # More accurate would be full MC for each S0
-        t_tensor = torch.tensor([[0.0]], device=solver.device, dtype=torch.float32)
-        S_tensor = torch.tensor([[S0_test]], device=solver.device, dtype=torch.float32)
-        V0 = solver._forward(t_tensor, S_tensor).item()
+        # Lightweight MC for plotting
+        mc_result = classical_xva_monte_carlo(
+            S0=S0_test,
+            K=p.K,
+            T=p.T,
+            r=p.r,
+            sigma=p.sigma,
+            lambda_c=p.lambda_c,
+            lambda_b=p.lambda_b,
+            R_c=p.R_c,
+            R_b=p.R_b,
+            r_f=p.r_f,
+            option_type=p.option_type,
+            n_paths=n_paths_mc,
+            n_steps=n_steps_mc,
+        )
 
-        # Rough CVA/DVA/FVA approximation based on V0
-        cva_approx = -p.lambda_c * (1 - p.R_c) * max(V0, 0) * p.T * 0.5  # rough
-        dva_approx = p.lambda_b * (1 - p.R_b) * max(-V0, 0) * p.T * 0.5
-        fva_approx = -(p.r_f - p.r) * V0 * p.T * 0.5
-
-        cva_by_spot.append(cva_approx)
-        dva_by_spot.append(dva_approx)
-        fva_by_spot.append(fva_approx)
+        # Store with correct signs for plotting (costs are negative)
+        cva_by_spot.append(-mc_result["CVA"])  # CVA is a cost
+        dva_by_spot.append(mc_result["DVA"])  # DVA is a benefit
+        fva_by_spot.append(-mc_result["FVA"])  # FVA is typically a cost
 
     # 1. Stacked XVA components
     ax = axes[0, 0]
@@ -909,6 +925,23 @@ def plot_xva_results(solver: XVABSDESolver, save_dir: str = "results/figures"):
     )
     final_xva = final_price - bs_price
 
+    # Get accurate XVA components at S0 from MC
+    mc_at_s0 = classical_xva_monte_carlo(
+        S0=p.S0,
+        K=p.K,
+        T=p.T,
+        r=p.r,
+        sigma=p.sigma,
+        lambda_c=p.lambda_c,
+        lambda_b=p.lambda_b,
+        R_c=p.R_c,
+        R_b=p.R_b,
+        r_f=p.r_f,
+        option_type=p.option_type,
+        n_paths=20000,
+        n_steps=50,
+    )
+
     summary_text = f"""
     XVA PRICING SUMMARY
     {'='*40}
@@ -927,10 +960,16 @@ def plot_xva_results(solver: XVABSDESolver, save_dir: str = "results/figures"):
       r_f = {p.r_f:.2%} (funding rate)
       Spread = {(p.r_f - p.r)*100:.0f} bps
     
+    XVA Components (MC):
+      CVA: {-mc_at_s0['CVA']:+.4f}
+      DVA: {mc_at_s0['DVA']:+.4f}
+      FVA: {-mc_at_s0['FVA']:+.4f}
+      Net: {mc_at_s0['Total_XVA']:+.4f}
+    
     Results (at S = {p.S0}):
       BS Price (no XVA):  {bs_price:.4f}
-      XVA Price:          {final_price:.4f}
-      XVA Adjustment:     {final_xva:+.4f} ({final_xva/bs_price*100:+.2f}%)
+      XVA Price (BSDE):   {final_price:.4f}
+      XVA Price (MC):     {mc_at_s0['XVA_price']:.4f}
     """
 
     ax.text(
