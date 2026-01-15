@@ -215,12 +215,28 @@ def generate_paths_and_values(
     }
 
 
-def compute_price_vs_spot(solver, S_min=0.5, S_max=1.5, n_points=50):
+def _get_reference_spot(eq) -> float:
+    if hasattr(eq, "X0_val"):
+        return float(getattr(eq, "X0_val"))
+    try:
+        X0 = eq.sample_initial_condition(1)
+        return float(X0.mean().abs().item())
+    except Exception:
+        return 1.0
+
+
+def compute_price_vs_spot(
+    solver,
+    S_min=0.5,
+    S_max=1.5,
+    n_points=50,
+    delta_mode: str = "sum",
+):
     """Compute Price and Delta vs Spot at t=0 (For BS Models)."""
     device = solver.device
     eq = solver.equation
 
-    ref_S = getattr(eq, "X0_val", 1.0)
+    ref_S = _get_reference_spot(eq)
     S_vals = np.linspace(S_min * ref_S, S_max * ref_S, n_points)
 
     prices = []
@@ -236,7 +252,10 @@ def compute_price_vs_spot(solver, S_min=0.5, S_max=1.5, n_points=50):
         u, delta = solver.get_price_and_delta(0.0, X)
 
         prices.append(u.item())
-        deltas.append(delta.mean().item())  # Average delta across basket
+        if delta_mode == "mean":
+            deltas.append(delta.mean().item())
+        else:
+            deltas.append(delta.sum().item())
 
     return S_vals, np.array(prices), np.array(deltas)
 
@@ -386,26 +405,88 @@ def plot_terminal_fit(data, title, save_path):
     plt.close()
 
 
-def plot_bs_greeks(solver, title, save_dir):
+def _compute_bsb_exact_curves(eq, S_vals, delta_mode: str):
+    device = eq.device
+    prices = []
+    deltas = []
+    for S in S_vals:
+        X = torch.full((1, eq.D), S, device=device, dtype=torch.float32)
+        price = eq.exact_solution(0.0, X).item()
+        prices.append(price)
+        if hasattr(eq, "exact_gradient"):
+            grad = eq.exact_gradient(0.0, X)
+            if delta_mode == "mean":
+                deltas.append(grad.mean().item())
+            else:
+                deltas.append(grad.sum().item())
+    return np.array(prices), np.array(deltas) if deltas else None
+
+
+def _compute_bs_mc_prices(eq, S_vals, mc_paths: int):
+    original_spot = eq.X0_val
+    prices = []
+    for S in S_vals:
+        eq.X0_val = float(S)
+        price, _ = eq.monte_carlo_price(n_paths=mc_paths)
+        prices.append(price)
+    eq.X0_val = original_spot
+    return np.array(prices)
+
+
+def plot_bs_greeks(
+    solver,
+    title,
+    save_dir,
+    delta_mode: str,
+    mc_paths: int,
+    spot_min: float,
+    spot_max: float,
+    spot_steps: int,
+):
     """Plot Price and Delta vs Spot (for BS Models)."""
     print("Computing Greeks surface...")
-    S_vals, prices, deltas = compute_price_vs_spot(solver)
+    S_vals, prices, deltas = compute_price_vs_spot(
+        solver,
+        S_min=spot_min,
+        S_max=spot_max,
+        n_points=spot_steps,
+        delta_mode=delta_mode,
+    )
+    bench_prices = None
+    bench_deltas = None
+
+    if isinstance(solver.equation, BlackScholesBarenblattEquation):
+        bench_prices, bench_deltas = _compute_bsb_exact_curves(
+            solver.equation, S_vals, delta_mode
+        )
+    elif isinstance(solver.equation, BlackScholesEquation) and mc_paths > 0:
+        bench_prices = _compute_bs_mc_prices(solver.equation, S_vals, mc_paths)
+        bench_deltas = np.gradient(bench_prices, S_vals)
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
     # Price
     ax1.plot(S_vals, prices, "b-", label="Deep BSDE")
+    if bench_prices is not None:
+        ax1.plot(S_vals, bench_prices, "k--", label="Benchmark")
     ax1.set_title("Price vs Spot (t=0)")
     ax1.set_xlabel("Spot Price")
     ax1.set_ylabel("Option Value")
     ax1.grid(True)
+    ax1.legend()
 
     # Delta
     ax2.plot(S_vals, deltas, "r-", label="Delta")
+    if bench_deltas is not None:
+        ax2.plot(S_vals, bench_deltas, "k--", label="Benchmark")
     ax2.set_title("Delta vs Spot (t=0)")
     ax2.set_xlabel("Spot Price")
-    ax2.set_ylabel("Delta (∂u/∂S)")
+    if delta_mode == "mean":
+        ax2.set_ylabel("Delta (mean ∂u/∂S)")
+    else:
+        ax2.set_ylabel("Delta (sum ∂u/∂S)")
     ax2.grid(True)
+    ax2.legend()
 
     plt.suptitle(title)
     plt.tight_layout()
@@ -847,7 +928,14 @@ def load_and_visualize(args):
     # Greeks (BS / BSB only)
     if args.equation in ["bs", "bsb"]:
         plot_bs_greeks(
-            solver, f"{args.equation.upper()} Greeks (D={args.dim})", save_dir
+            solver,
+            f"{args.equation.upper()} Greeks (D={args.dim})",
+            save_dir,
+            delta_mode=args.delta_mode,
+            mc_paths=args.greeks_mc_paths,
+            spot_min=args.spot_min,
+            spot_max=args.spot_max,
+            spot_steps=args.spot_steps,
         )
 
     # Single-model price comparison (exact or MC)
@@ -922,6 +1010,19 @@ if __name__ == "__main__":
     parser.add_argument("--save-dir", type=str, default="results/figures")
     parser.add_argument("--n-paths", type=int, default=50)
     parser.add_argument("--n-steps", type=int, default=50)
+    parser.add_argument(
+        "--delta-mode",
+        type=str,
+        default="mean",
+        choices=["sum", "mean"],
+        help="Delta aggregation across assets",
+    )
+    parser.add_argument(
+        "--greeks-mc-paths",
+        type=int,
+        default=0,
+        help="MC paths for BS benchmark curve (0 = skip)",
+    )
     parser.add_argument(
         "--benchmark-json",
         type=str,
