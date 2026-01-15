@@ -1,0 +1,27 @@
+\begin{table}[htbp]
+\centering
+\caption{XVA Model Parameters}
+\label{tab:xva_params}
+\begin{tabular}{@{}llr@{}}
+\toprule
+\textbf{Category} & \textbf{Parameter} & \textbf{Value} \\
+\midrule
+\multirow{5}{*}{Option} 
+& Initial spot $S_0$ & 100 \\
+& Strike $K$ & 100 \\
+& Maturity $T$ & 1 year \\
+& Risk-free rate $r$ & 5% \\
+& Volatility $\sigma$ & 20% \\
+\midrule
+\multirow{4}{*}{Credit} 
+& Counterparty default intensity $\lambda_c$ & 2% \\
+& Own default intensity $\lambda_b$ & 1% \\
+& Counterparty recovery $R_c$ & 40% \\
+& Own recovery $R_b$ & 40% \\
+\midrule
+\multirow{2}{*}{Funding}
+& Funding rate $r_f$ & 6% \\
+& Funding spread & 100 bps \\
+\bottomrule
+\end{tabular}
+\end{table}

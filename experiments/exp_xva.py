@@ -920,9 +920,12 @@ def plot_xva_results(solver: XVABSDESolver, save_dir: str = "results/figures"):
     ax = axes[1, 1]
     ax.axis("off")
 
-    final_price = (
-        solver.prices[-1] if solver.prices else xva_prices[len(xva_prices) // 2]
-    )
+    # Use average of last 1000 iterations for stability
+    if solver.prices:
+        n_avg = min(1000, len(solver.prices))
+        final_price = np.mean(solver.prices[-n_avg:])
+    else:
+        final_price = xva_prices[len(xva_prices) // 2]
     final_xva = final_price - bs_price
 
     # Get accurate XVA components at S0 from MC
@@ -1093,21 +1096,24 @@ def main():
             params.S0, params.K, params.T, params.r, params.sigma
         )
 
-    final_price = (
-        solver.prices[-1]
-        if solver.prices
-        else solver._forward(
+    # Use average of last 1000 iterations to reduce noise
+    if solver.prices:
+        n_avg = min(1000, len(solver.prices))
+        final_price = np.mean(solver.prices[-n_avg:])
+    else:
+        final_price = solver._forward(
             torch.zeros(1, 1, device=solver.device),
             torch.tensor([[params.S0]], device=solver.device, dtype=torch.float32),
         ).item()
-    )
     xva_adjustment = final_price - bs_price
 
     print("\n" + "=" * 70)
     print("FINAL RESULTS")
     print("=" * 70)
     print(f"Black-Scholes price (no XVA): {bs_price:.6f}")
-    print(f"Deep BSDE XVA price:          {final_price:.6f}")
+    print(
+        f"Deep BSDE XVA price:          {final_price:.6f} (avg of last {n_avg if solver.prices else 1} iters)"
+    )
     print(
         f"Deep BSDE XVA adjustment:     {xva_adjustment:+.6f} ({xva_adjustment/bs_price*100:+.2f}%)"
     )

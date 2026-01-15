@@ -1,0 +1,26 @@
+\begin{table}[htbp]
+\centering
+\caption{XVA Pricing: Deep BSDE vs Classical Monte Carlo}
+\label{tab:xva_results}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Metric} & \textbf{Deep BSDE} & \textbf{Classical MC} \\
+\midrule
+Black-Scholes Price (no XVA) & 10.4506 & 10.4506 \\
+XVA-Adjusted Price & 10.2189 & 10.2219 \\
+Total XVA Adjustment & -0.2317 & -0.2287 \\
+\midrule
+CVA Component & --- & -0.1242 \\
+DVA Component & --- & +0.0000 \\
+FVA Component & --- & -0.1045 \\
+\midrule
+Relative Difference (\%) & \multicolumn{2}{c}{0.03\%} \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Note: European call, $S_0 = K = 100$, $r = 5%$, $\sigma = 20%$, $T = 1$. 
+Credit: $\lambda_c = 2%$, $\lambda_b = 1%$, $R = 40%$. 
+Funding: $r_f = 6%$.
+\end{tablenotes}
+\end{table}

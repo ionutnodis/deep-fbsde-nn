@@ -1,0 +1,16 @@
+\begin{table}[htbp]
+\centering
+\caption{Black-Scholes-Barenblatt Equation: Dimension Scaling Results}
+\label{tab:bsb_results}
+\begin{tabular}{@{}rrrr@{}}
+\toprule
+\textbf{Dimension} & \textbf{Deep BSDE} & \textbf{Exact} & \textbf{Rel. Error (\%)} \\
+\midrule
+100 & 1.078706 & 1.094174 & 1.4137 \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Note: Exact solution $u(0, x) = \|x\|^2 \exp(\sigma_{\max}^2 T)$ with $\sigma_{\min} = 0.1$, $\sigma_{\max} = 0.3$, $T = 1$.
+\end{tablenotes}
+\end{table}

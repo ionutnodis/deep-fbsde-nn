@@ -1,0 +1,18 @@
+\begin{table}[htbp]
+\centering
+\caption{Black-Scholes Arithmetic Basket Call: Deep BSDE vs Monte Carlo}
+\label{tab:bs_basket_results}
+\begin{tabular}{@{}rrrrrr@{}}
+\toprule
+\textbf{Dim} & \textbf{Deep BSDE} & \textbf{MC Price} & \textbf{MC Stderr} & \textbf{Rel. Err (\%)} & \textbf{In 2$\sigma$ CI} \\
+\midrule
+10 & 0.399249 & 0.398728 & 0.001608 & 0.1309 & Yes \\
+50 & 0.907325 & 1.000255 & 0.003880 & 9.2906 & No \\
+100 & 1.675244 & 1.598543 & 0.005760 & 4.7982 & No \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Note: Parameters: $r = 0.01$, $\sigma = 0.25$, $T = 1$, $K = D$, $S_0 = 1$ per asset. MC uses 100,000 paths.
+\end{tablenotes}
+\end{table}
