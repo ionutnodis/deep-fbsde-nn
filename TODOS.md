@@ -60,12 +60,6 @@ Deferred work with context. Generated during /plan-eng-review of the v0.1 releas
 - **Context:** Presented in CEO review, no decision taken — re-propose at 0.2.
 - **Depends on:** nothing.
 
-### Tighten HJB end-to-end convergence via per-timestep Z networks
-- **What:** The single-network architecture derives Z = ∇u by autograd from the same network as u. On strongly nonlinear (quadratic-in-Z) drivers like HJB, the optimizer damps the martingale term by under-estimating ‖Z‖, which under-weights the driver: calibrated runs plateau ~12-15% above the Cole-Hopf reference at D=3 regardless of budget, network size, or time-grid resolution (verified during v0.1 test calibration). Implement the Han et al. original design (separate Z subnetwork per timestep) or an FBSNN-style variant as an alternative solver, then tighten `test_hjb_end_to_end_sanity` from 20% to ~5%.
-- **Why:** The sharp correctness test (PDE-residual, `test_hjb_driver_consistent_with_reference`) already guards the math; this closes the end-to-end gap and makes HJB a headline validation instead of a caveat.
-- **Context:** Discovered while calibrating v0.1 convergence tests — the same calibration that caught the StandardSolver driver-sign bug and the HJB driver factor-2 bug. See tests/test_convergence.py module docstring.
-- **Depends on:** v0.1 test infrastructure (shipped).
-
 ### Minor cleanups
 - **What:** `net_u` passes `retain_graph=True` unconditionally (`solvers/base.py:179`) — only needed during training; and NAISNet/FeedForwardNet duplicate `count_parameters`/`__repr__`/activation resolution (candidate shared base class).
 - **Why:** Memory hygiene during long validation loops; DRY.
