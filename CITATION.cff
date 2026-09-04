@@ -1,0 +1,49 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Deep FBSDE Neural Networks"
+type: software
+authors:
+  - family-names: Nodis
+    given-names: Ionut
+version: 0.1.0
+date-released: 2026-09-04
+license: MIT
+repository-code: "https://github.com/ionutnodis/deep-fbsde-nn"
+keywords:
+  - FBSDE
+  - BSDE
+  - deep-learning
+  - PDE
+  - quantitative-finance
+  - pytorch
+abstract: >-
+  A PyTorch library for solving high-dimensional partial differential
+  equations and forward-backward stochastic differential equations with the
+  Deep BSDE method, featuring a conditioned NAIS-Net architecture,
+  Multi-Level Monte Carlo time-stepping, and validation against exact
+  solutions.
+references:
+  - type: article
+    authors:
+      - family-names: Han
+        given-names: Jiequn
+      - family-names: Jentzen
+        given-names: Arnulf
+      - family-names: E
+        given-names: Weinan
+    title: "Solving high-dimensional partial differential equations using deep learning"
+    journal: "Proceedings of the National Academy of Sciences"
+    volume: 115
+    issue: 34
+    year: 2018
+  - type: article
+    authors:
+      - family-names: Güler
+        given-names: Rıza Alp
+      - family-names: Laignelet
+        given-names: Arnaud
+      - family-names: Parpas
+        given-names: Panos
+    title: "Towards Robust and Stable Deep Learning Algorithms for Forward Backward Stochastic Differential Equations"
+    year: 2019
+    url: "https://arxiv.org/abs/1910.11623"
