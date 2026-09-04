@@ -7,7 +7,7 @@ A PyTorch library for solving high-dimensional Partial Differential Equations (P
 
 ## Acknowledgements
 
-This library was developed by **Ionut Nodis** as part of the **CQF (Certificate in Quantitative Finance) Final Project** (January 2026). The implementation builds upon example code and guidance provided by **Professor Panos Parpas** from Imperial College London.
+This library was developed by **Ionut Nodis** as part of the **CQF (Certificate in Quantitative Finance) Final Project** (January 2026) — the full write-up is in the repo: [**CQF final report (PDF)**](docs/cqf-final-report.pdf). The implementation builds upon example code and guidance provided by **Professor Panos Parpas** from Imperial College London.
 
 The theoretical foundations are based on the Deep BSDE method introduced by Han, Jentzen, and E (2018), with neural network stability enhancements from the NAIS-Net architecture (Ciccone et al., 2018; Güler, Laignelet, Parpas, 2019).
 
