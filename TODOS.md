@@ -36,12 +36,6 @@ Deferred work with context. Generated during /plan-eng-review of the v0.1 releas
 - **Context:** Flagged in v0.1 eng review (code quality); v0.1 adds a docstring warning only.
 - **Depends on:** nothing; bundle with any 0.2 API pass.
 
-### Example notebook with execution harness + Colab badge
-- **What:** `examples/quickstart_bsb.ipynb` executed in CI (nbclient/papermill) so it cannot rot, plus an "Open in Colab" README badge. Generate the notebook from the tested `examples/quickstart.py` via jupytext so the source of truth stays tested.
-- **Why:** Notebooks are the lingua franca for research onboarding; Colab removes the install barrier entirely. But an unexecuted notebook breaks within two releases, so the execution harness is a precondition of the badge.
-- **Context:** v0.1 ships tested `examples/quickstart.py` instead (eng review outside-voice finding #8; Colab badge deferred in CEO review D2.3 — "adds a moving part the day before release").
-- **Depends on:** CI from Stage 4.
-
 ### Docs site
 - **What:** mkdocs-material (or similar) site: API reference from docstrings, math background, equation-authoring guide.
 - **Why:** README + docstrings are the 0.1 documentation surface (also the JOSS fallback position). A site becomes worth it when the API surface or contributor count grows.

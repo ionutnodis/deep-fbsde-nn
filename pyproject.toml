@@ -75,6 +75,8 @@ ignore = ["E501"]
 "experiments/**" = ["E402"]
 # tables.py bootstraps sys.path and uses an import as an availability probe.
 "tables.py" = ["E402", "F401"]
+# jupytext percent-format notebook source: imports live in their own cells.
+"examples/quickstart_notebook.py" = ["E402"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
