@@ -13,9 +13,9 @@ References:
   Periodic Activation Functions" (SIREN)
 """
 
+
 import torch
 import torch.nn as nn
-from typing import Union
 
 
 class Sine(nn.Module):

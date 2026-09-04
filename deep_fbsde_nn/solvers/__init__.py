@@ -8,8 +8,8 @@ Solvers:
 """
 
 from .base import BaseSolver, SolverConfig
-from .standard import StandardSolver
 from .global_solver import GlobalSolver
+from .standard import StandardSolver
 
 __all__ = [
     "BaseSolver",

@@ -15,11 +15,11 @@ Connection to PDE (Feynman-Kac):
     u(T, x) = g(x)
 """
 
-import torch
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional, Union
-import numpy as np
+
+import torch
 
 
 @dataclass
@@ -147,7 +147,7 @@ class BaseEquation(ABC):
         try:
             result = self.exact_solution(0.0, torch.ones(1, self.D, device=self.device))
             return result is not None
-        except:
+        except Exception:
             return False
 
     def __repr__(self) -> str:

@@ -5,10 +5,11 @@ Metrics and Benchmarks
 Error metrics and Monte Carlo benchmarking utilities.
 """
 
+from typing import Optional, Tuple, Union
+
 import numpy as np
 import torch
 import torch.nn.functional as F
-from typing import Tuple, Optional, Union
 
 
 def relative_error(predicted: float, exact: float) -> float:

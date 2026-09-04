@@ -22,10 +22,12 @@ Loss function:
     where Ŷ_{n+1} = Y_n - f(t_n, X_n, Y_n, Z_n)Δt + Z_n · σ(t_n, X_n) · ΔW_n
 """
 
+from typing import Optional, Tuple
+
 import torch
-from typing import Tuple, Optional
-from .base import BaseSolver, SolverConfig
+
 from ..equations.base import BaseEquation
+from .base import BaseSolver, SolverConfig
 
 
 class StandardSolver(BaseSolver):
@@ -60,7 +62,7 @@ class StandardSolver(BaseSolver):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         M = dW.shape[0]
         N = dW.shape[1]
-        dt = self.equation.T / N
+        self.equation.T / N
 
         X = self._get_initial_condition(M)
 
@@ -100,9 +102,13 @@ class StandardSolver(BaseSolver):
             # Use dW_corr for state evolution
             X_new = X + mu * dt_n + sigma * dW_corr
 
-            # Use dW_corr for BSDE consistency
+            # BSDE step under the documented convention (equations/base.py):
+            #   dY = -f dt + Z^T sigma dW,  driver() returns f.
+            # GlobalSolver uses the same sign; historically this solver added
+            # phi*dt, which silently flipped the driver sign for every
+            # nonlinear equation (caught by the HJB convergence test).
             Y_pred = (
-                Y + phi * dt_n + torch.sum(Z * sigma * dW_corr, dim=1, keepdim=True)
+                Y - phi * dt_n + torch.sum(Z * sigma * dW_corr, dim=1, keepdim=True)
             )
 
             X = X_new.detach().requires_grad_(True)

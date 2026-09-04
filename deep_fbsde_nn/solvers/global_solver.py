@@ -23,12 +23,12 @@ Sampling strategies for X0:
 - 'gaussian': Gaussian around a center point
 """
 
-import torch
-from typing import Tuple, Optional, Union
-import numpy as np
+from typing import Optional, Tuple, Union
 
-from .base import BaseSolver, SolverConfig
+import torch
+
 from ..equations.base import BaseEquation
+from .base import BaseSolver, SolverConfig
 
 
 class GlobalSolver(BaseSolver):

@@ -10,7 +10,7 @@ Equations for Deep BSDE solvers:
 
 from .base import BaseEquation, EquationConfig
 from .black_scholes import BlackScholesEquation, VanillaCallEquation
-from .black_scholes_barenblatt import BlackScholesBarenblattEquation, AllenCahnEquation
+from .black_scholes_barenblatt import AllenCahnEquation, BlackScholesBarenblattEquation
 from .hjb import HJBEquation
 
 __all__ = [
