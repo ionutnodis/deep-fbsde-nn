@@ -134,6 +134,28 @@ What the CI actually proves, per equation:
 
 Plus: NAIS-Net projection invariant, Brownian path statistics, checkpoint round-trips under `weights_only=True`, packaging E2E (build → clean-venv install → import → training smoke), and this README's quickstart at reduced scale.
 
+## Benchmarks
+
+Reproducible with one command — every row is a seeded run against an exact solution, a published benchmark value, or a seeded Monte-Carlo reference:
+
+<!-- BENCHMARK:START -->
+| Equation | d | Solver | Reference | Rel. error | Time |
+|---|---|---|---|---|---|
+| Black-Scholes-Barenblatt | 2 | Standard | exact solution | 1.89% | 5s |
+| Black-Scholes-Barenblatt | 10 | Stepwise | exact solution | 0.11% | 15s |
+| Black-Scholes-Barenblatt | 50 | Stepwise | exact solution | 0.12% | 32s |
+| Black-Scholes-Barenblatt | 100 | Stepwise | exact solution | 0.06% | 48s |
+| Vanilla call | 1 | Standard | Black-Scholes closed form | 1.01% | 27s |
+| BS basket call | 5 | Stepwise | seeded MC (same payoff) | 0.62% | 27s |
+| BS basket call | 25 | Stepwise | seeded MC (same payoff) | 0.35% | 36s |
+| Hamilton-Jacobi-Bellman | 3 | Stepwise | Cole-Hopf MC (seeded) | 2.31% | 22s |
+| Hamilton-Jacobi-Bellman | 20 | Stepwise | Cole-Hopf MC (seeded) | 0.28% | 44s |
+| Hamilton-Jacobi-Bellman | 100 | Stepwise | Cole-Hopf MC (seeded) / published 4.5901 | 0.03% | 102s |
+| Allen-Cahn | 100 | Stepwise | published 0.052802 (branching diffusion) | 0.98% | 103s |
+
+<sub>Seeded runs, CPU (arm), torch 2.14.0. Regenerate: `python benchmarks/run.py` (~10 min).</sub>
+<!-- BENCHMARK:END -->
+
 ### Known limitations (honest edition)
 
 - **Strongly nonlinear drivers with `StandardSolver`/`GlobalSolver`:** deriving $Z$ by autograd from the same network as $u$ under-weights quadratic-in-$Z$ drivers — those solvers plateau ~12-15% above the HJB reference. **Resolved in practice by `StepwiseSolver`** (2% at $d{=}3$, 0.03% at $d{=}100$); the derivative-coupled solvers keep the honest caveat since they're what you need for solution surfaces and greeks.
