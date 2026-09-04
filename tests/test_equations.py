@@ -149,8 +149,21 @@ class TestHJB:
 
 class TestAllenCahn:
     def test_terminal_at_origin(self):
+        # canonical benchmark payoff: g(0) = 1/(2 + 0) = 0.5
         eq = AllenCahnEquation(dimension=D)
-        assert torch.allclose(eq.terminal(torch.zeros(1, D)), torch.ones(1, 1))
+        assert torch.allclose(eq.terminal(torch.zeros(1, D)), torch.full((1, 1), 0.5))
+
+    def test_terminal_gradient_matches_analytic(self):
+        eq = AllenCahnEquation(dimension=D)
+        X = torch.rand(4, D)
+        norm_sq = (X**2).sum(dim=1, keepdim=True)
+        expected = -0.8 * X / (2.0 + 0.4 * norm_sq) ** 2
+        assert torch.allclose(eq.terminal_gradient(X), expected, atol=1e-6)
+
+    def test_canonical_diffusion_is_sqrt2(self):
+        eq = AllenCahnEquation(dimension=D)
+        sigma = eq.diffusion(torch.tensor(0.0), torch.zeros(1, D), None)
+        assert torch.allclose(sigma, torch.full((1, D), 2.0**0.5))
 
     def test_driver_follows_documented_convention(self):
         # PDE: du/dt + (1/2)Δu + (u - u³) = 0 -> driver returns f = u - u³

@@ -129,8 +129,8 @@ What the CI actually proves, per equation:
 | `BlackScholesBarenblattEquation` | analytical solution | convergence < 2% (low-d); D=100 smoke on release |
 | `VanillaCallEquation` | Black-Scholes closed form (D=1, in-class, `torch.erf`) | convergence < 5% |
 | `HJBEquation` | Cole-Hopf Monte-Carlo formula (in-class, seedable) | PDE-residual consistency (sharp); `StepwiseSolver` reproduces Han et al.'s published $d{=}100$ value 4.5901 to <2% in CI (0.03% calibrated); `StandardSolver` sanity band |
-| `BlackScholesEquation` (basket) | Monte-Carlo benchmark method only | shape/contract tests |
-| `AllenCahnEquation` | none yet | shape/contract tests |
+| `BlackScholesEquation` (basket) | seeded Monte-Carlo benchmark (same smoothed payoff) | `StepwiseSolver` within max(3%, 5·SE) of MC, D=5 |
+| `AllenCahnEquation` | published branching-diffusion value 0.052802 (canonical Han et al. spec) | `StepwiseSolver` < 3% at $d{=}100$ (0.98% calibrated) |
 
 Plus: NAIS-Net projection invariant, Brownian path statistics, checkpoint round-trips under `weights_only=True`, packaging E2E (build → clean-venv install → import → training smoke), and this README's quickstart at reduced scale.
 
@@ -138,7 +138,6 @@ Plus: NAIS-Net projection invariant, Brownian path statistics, checkpoint round-
 
 - **Strongly nonlinear drivers with `StandardSolver`/`GlobalSolver`:** deriving $Z$ by autograd from the same network as $u$ under-weights quadratic-in-$Z$ drivers — those solvers plateau ~12-15% above the HJB reference. **Resolved in practice by `StepwiseSolver`** (2% at $d{=}3$, 0.03% at $d{=}100$); the derivative-coupled solvers keep the honest caveat since they're what you need for solution surfaces and greeks.
 - **XVA and greeks are experimental**: quarantined under `experiments/experimental/` with runtime warnings; they need debugging and are not part of the tested surface.
-- **Basket and Allen-Cahn have no reference solution yet** — they ship contract-tested, not validated.
 
 ## Project Structure
 
