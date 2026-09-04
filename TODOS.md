@@ -28,28 +28,14 @@ Deferred work with context. Generated during /plan-eng-review of the v0.1 releas
 - **Context:** Outside-voice finding #11 in the v0.1 eng review; v0.1 documents the M=1 choice in the README instead.
 - **Depends on:** benchmark harness (item above) makes this nearly free.
 
-### `setup_device` opt-in API
-- **What:** Stop `utils/device.py:setup_device` mutating global torch state (`torch.set_num_threads(8)`, cudnn benchmark, TF32 flags) as a side effect; make optimizations opt-in parameters.
-- **Why:** Library utility functions changing process-global state silently is a footgun for users embedding the library.
-- **Pros:** Predictable library behavior; keeps benchmarks honest.
-- **Cons:** Small API change; needs deprecation note.
-- **Context:** Flagged in v0.1 eng review (code quality); v0.1 adds a docstring warning only.
-- **Depends on:** nothing; bundle with any 0.2 API pass.
-
 ### Docs site
 - **What:** mkdocs-material (or similar) site: API reference from docstrings, math background, equation-authoring guide.
 - **Why:** README + docstrings are the 0.1 documentation surface (also the JOSS fallback position). A site becomes worth it when the API surface or contributor count grows.
 - **Context:** Deferred in CEO review; JOSS reviewers may pull minor docs work into 0.1 — accept reviewer-driven additions without building the site.
 - **Depends on:** nothing hard; best after 0.2 benchmark tables exist to show off.
 
-### Polish pack
-- **What:** `--cite` helper printing the BibTeX, informative solver `__repr__`, OOM error hint suggesting smaller batch, ETA in training printout.
-- **Why:** Small touches that make researchers smile; each is <30 min.
-- **Context:** Presented in CEO review, no decision taken — re-propose at 0.2.
-- **Depends on:** nothing.
-
-### Minor cleanups
-- **What:** `net_u` passes `retain_graph=True` unconditionally (`solvers/base.py:179`) — only needed during training; and NAISNet/FeedForwardNet duplicate `count_parameters`/`__repr__`/activation resolution (candidate shared base class).
-- **Why:** Memory hygiene during long validation loops; DRY.
+### Minor cleanups (seeded as a good-first-issue at launch)
+- **What:** NAISNet/FeedForwardNet duplicate `count_parameters`/`__repr__`/activation resolution (candidate shared base class). (`retain_graph` fixed in 0.2.)
+- **Why:** DRY; kept deliberately as a community on-ramp.
 - **Cons:** Pure refactor, no user-visible change — lowest priority.
 - **Depends on:** test suite green (Stage 2) so the refactor is safe.
