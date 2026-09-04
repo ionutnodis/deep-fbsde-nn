@@ -30,6 +30,43 @@ class TestDevice:
     def test_auto_returns_a_device(self):
         assert isinstance(get_device("auto"), torch.device)
 
+    def test_setup_device_is_read_only_by_default(self):
+        from deep_fbsde_nn.utils.device import setup_device
+
+        threads_before = torch.get_num_threads()
+        caps = setup_device(torch.device("cpu"))
+        assert torch.get_num_threads() == threads_before, "must not mutate by default"
+        assert caps["device"].type == "cpu"
+
+    def test_setup_device_optimize_opt_in(self):
+        from deep_fbsde_nn.utils.device import setup_device
+
+        threads_before = torch.get_num_threads()
+        try:
+            setup_device(torch.device("cpu"), optimize=True)
+            assert torch.get_num_threads() == 8
+        finally:
+            torch.set_num_threads(threads_before)
+
+
+class TestCLI:
+    def test_cite_prints_bibtex_with_doi(self):
+        result = subprocess.run(
+            [sys.executable, "-m", "deep_fbsde_nn", "--cite"],
+            capture_output=True, text=True, cwd=REPO_ROOT,
+        )
+        assert result.returncode == 0
+        assert "@software" in result.stdout
+        assert "10.5281/zenodo.22311423" in result.stdout
+
+    def test_bare_invocation_prints_version(self):
+        result = subprocess.run(
+            [sys.executable, "-m", "deep_fbsde_nn"],
+            capture_output=True, text=True, cwd=REPO_ROOT,
+        )
+        assert result.returncode == 0
+        assert "deep-fbsde-nn" in result.stdout
+
 
 class TestMetrics:
     def test_relative_error_percentage(self):

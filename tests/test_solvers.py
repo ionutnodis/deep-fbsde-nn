@@ -117,3 +117,9 @@ class TestTraining:
         assert "Y0_exact" in result
         assert "relative_error" in result
         assert np.isfinite(result["Y0_exact"])
+
+    def test_repr_is_informative(self):
+        solver = _small_solver()
+        text = repr(solver)
+        assert "StandardSolver" in text
+        assert "params=" in text

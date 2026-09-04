@@ -176,8 +176,11 @@ class BaseSolver(ABC):
 
         # Gradient
         ones = torch.ones_like(u)
+        # Graph retention is only needed while training (the loss backprops
+        # through many net_u calls); keeping it during eval leaks memory
+        # across long validation loops.
         Z = torch.autograd.grad(
-            u, X, ones, create_graph=self._is_training, retain_graph=True
+            u, X, ones, create_graph=self._is_training, retain_graph=self._is_training
         )[0]
 
         return u, Z
@@ -224,6 +227,7 @@ class BaseSolver(ABC):
         L = getattr(self.equation, "L", None)
 
         start_time = time.time()
+        run_start = start_time
         loss_buffer = []
 
         start_iter = self.current_iteration
@@ -238,8 +242,18 @@ class BaseSolver(ABC):
 
             # Forward + backward
             self.optimizer.zero_grad(set_to_none=True)
-            loss, Y0 = self._compute_loss(t, dW, W)
-            loss.backward()
+            try:
+                loss, Y0 = self._compute_loss(t, dW, W)
+                loss.backward()
+            except RuntimeError as e:
+                if "out of memory" in str(e).lower():
+                    raise RuntimeError(
+                        f"Out of memory at iteration {it} with batch_size="
+                        f"{self.config.batch_size}, N={N} timesteps, "
+                        f"D={self.equation.D}. Try a smaller batch_size or "
+                        "fewer timesteps, or move to device='cpu'."
+                    ) from e
+                raise
 
             torch.nn.utils.clip_grad_norm_(
                 self.model.parameters(), self.config.gradient_clip
@@ -254,9 +268,12 @@ class BaseSolver(ABC):
                 avg_loss = np.mean(loss_buffer) if loss_buffer else loss.item()
                 elapsed = time.time() - start_time
 
+                done = it - start_iter + 1
+                remaining = end_iter - it - 1
+                eta = (time.time() - run_start) / done * remaining
                 print(
                     f"It {it:5d} | Loss {avg_loss:.3e} | Y0 {Y0_val:.4f} | "
-                    f"N {N:2d} | {elapsed:.1f}s"
+                    f"N {N:2d} | {elapsed:.1f}s | ETA {eta:.0f}s"
                 )
 
                 self.training_history["iterations"].append(it)
@@ -324,3 +341,11 @@ class BaseSolver(ABC):
         self.model.load_state_dict(ckpt["model"])
         self.training_history = ckpt.get("history", {})
         self.current_iteration = ckpt.get("iteration", 0)
+
+    def __repr__(self) -> str:
+        n_params = sum(p.numel() for p in self.model.parameters())
+        return (
+            f"{type(self).__name__}({self.equation.name}, D={self.equation.D}, "
+            f"device={self.device.type}, batch={self.config.batch_size}, "
+            f"iteration={self.current_iteration}, params={n_params:,})"
+        )

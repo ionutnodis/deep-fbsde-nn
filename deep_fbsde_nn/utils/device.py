@@ -29,12 +29,19 @@ def get_device(preference: str = "auto") -> torch.device:
         return torch.device(preference)
 
 
-def setup_device(device: torch.device) -> dict:
+def setup_device(device: torch.device, optimize: bool = False) -> dict:
     """
-    Setup device-specific optimizations.
+    Report device capabilities; optionally apply global optimizations.
+
+    By default this is a READ-ONLY probe (since v0.2). Pass ``optimize=True``
+    to apply the process-global performance settings that earlier versions
+    applied unconditionally as a side effect: cudnn benchmark mode, TF32
+    matmuls on CUDA, and a fixed CPU thread count. Library code never calls
+    this with ``optimize=True`` on your behalf.
 
     Args:
-        device: The device to configure
+        device: The device to inspect
+        optimize: Apply global performance settings (mutates torch state)
 
     Returns:
         dict with device capabilities
@@ -47,18 +54,15 @@ def setup_device(device: torch.device) -> dict:
     }
 
     if device.type == "cuda":
-        # CUDA optimizations
-        torch.backends.cudnn.benchmark = True
-        torch.backends.cudnn.enabled = True
-
-        # TF32 for Ampere GPUs
-        torch.backends.cuda.matmul.allow_tf32 = True
-        torch.backends.cudnn.allow_tf32 = True
+        if optimize:
+            torch.backends.cudnn.benchmark = True
+            torch.backends.cudnn.enabled = True
+            # TF32 for Ampere+ GPUs
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
 
         capabilities["amp_available"] = True
         capabilities["compile_available"] = int(torch.__version__.split(".")[0]) >= 2
-
-        # Get GPU info
         capabilities["gpu_name"] = torch.cuda.get_device_name(0)
         capabilities["gpu_memory"] = (
             torch.cuda.get_device_properties(0).total_memory / 1e9
@@ -70,8 +74,8 @@ def setup_device(device: torch.device) -> dict:
         capabilities["compile_available"] = False
 
     else:
-        # CPU
-        torch.set_num_threads(8)
+        if optimize:
+            torch.set_num_threads(8)
         capabilities["amp_available"] = False
         capabilities["compile_available"] = int(torch.__version__.split(".")[0]) >= 2
 
