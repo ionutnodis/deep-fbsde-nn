@@ -19,21 +19,19 @@ Usage:
     python experiments/exp_hjb.py --dim 100 --iterations 5000
 """
 
-import sys
-from pathlib import Path
-import time
 import argparse
 import json
-import torch
-import numpy as np
+import sys
+import time
+from pathlib import Path
+
 import matplotlib.pyplot as plt
-from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from deep_fbsde_nn.networks import NAISNet
 from deep_fbsde_nn.equations.hjb import HJBEquation
-from deep_fbsde_nn.solvers import StandardSolver, SolverConfig
+from deep_fbsde_nn.networks import NAISNet
+from deep_fbsde_nn.solvers import SolverConfig, StandardSolver
 from deep_fbsde_nn.utils import get_device
 
 

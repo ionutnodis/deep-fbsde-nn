@@ -34,22 +34,30 @@ Usage:
 """
 
 import sys
+import warnings
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# This file lives in experiments/experimental/ — repo root is three levels up.
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import norm
+warnings.warn(
+    "exp_xva.py is EXPERIMENTAL: XVA pricing and greeks are known to need "
+    "debugging (commit e39091a) and are not part of the tested surface.",
+    UserWarning,
+    stacklevel=1,
+)
+
 import argparse
-from typing import Tuple, Optional, Dict
 from dataclasses import dataclass
+from typing import Dict, Tuple
+
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import torch.optim as optim
+from scipy.stats import norm
 
 from deep_fbsde_nn.networks import NAISNet
-
 
 # =============================================================================
 # BLACK-SCHOLES ANALYTICS (for reference)
@@ -269,7 +277,7 @@ class XVABSDESolver:
         self.prices = []
         self.current_iteration = 0
 
-        print(f"XVA BSDE Solver with NAIS-Net")
+        print("XVA BSDE Solver with NAIS-Net")
         print(f"  Parameters: {sum(p.numel() for p in self.net.parameters()):,}")
         print(f"  Option: {params.option_type}, S0={params.S0}, K={params.K}")
         print(f"  Credit: λ_c={params.lambda_c}, λ_b={params.lambda_b}")
@@ -448,7 +456,7 @@ class XVABSDESolver:
         else:
             bs_price = black_scholes_put(p.S0, p.K, p.T, p.r, p.sigma)
 
-        print(f"\nTraining XVA Pricer")
+        print("\nTraining XVA Pricer")
         print(f"  BS price (no XVA): {bs_price:.6f}")
         print(f"  Iterations: {n_iterations}, Batch: {batch_size}")
         print(f"  MLMC: {'Enabled' if use_mlmc else 'Disabled'}")
@@ -680,7 +688,7 @@ def plot_xva_results(solver: XVABSDESolver, save_dir: str = "results/figures"):
     ax.axvline(p.K, color="gray", linestyle=":", alpha=0.5)
     ax.set_xlabel("Spot Price S")
     ax.set_ylabel("XVA Adjustment")
-    ax.set_title(f"XVA = Price(XVA) - Price(BS)")
+    ax.set_title("XVA = Price(XVA) - Price(BS)")
     ax.grid(True, alpha=0.3)
 
     # Add text with XVA parameters
@@ -926,7 +934,7 @@ def plot_xva_results(solver: XVABSDESolver, save_dir: str = "results/figures"):
         final_price = np.mean(solver.prices[-n_avg:])
     else:
         final_price = xva_prices[len(xva_prices) // 2]
-    final_xva = final_price - bs_price
+    final_price - bs_price
 
     # Get accurate XVA components at S0 from MC
     mc_at_s0 = classical_xva_monte_carlo(
@@ -948,27 +956,27 @@ def plot_xva_results(solver: XVABSDESolver, save_dir: str = "results/figures"):
     summary_text = f"""
     XVA PRICING SUMMARY
     {'='*40}
-    
+
     Option Parameters:
       Type: {p.option_type.upper()}
       S₀ = {p.S0}, K = {p.K}, T = {p.T}
       r = {p.r:.2%}, σ = {p.sigma:.2%}
-    
+
     Credit Parameters:
       λ_c = {p.lambda_c:.2%} (counterparty default)
       λ_b = {p.lambda_b:.2%} (own default)
       R_c = {p.R_c:.0%}, R_b = {p.R_b:.0%}
-    
+
     Funding Parameters:
       r_f = {p.r_f:.2%} (funding rate)
       Spread = {(p.r_f - p.r)*100:.0f} bps
-    
+
     XVA Components (MC):
       CVA: {-mc_at_s0['CVA']:+.4f}
       DVA: {mc_at_s0['DVA']:+.4f}
       FVA: {-mc_at_s0['FVA']:+.4f}
       Net: {mc_at_s0['Total_XVA']:+.4f}
-    
+
     Results (at S = {p.S0}):
       BS Price (no XVA):  {bs_price:.4f}
       XVA Price (BSDE):   {final_price:.4f}

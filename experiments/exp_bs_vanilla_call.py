@@ -31,18 +31,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import norm
 import argparse
-from typing import Tuple, Optional
 from dataclasses import dataclass
+from typing import Tuple
+
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import torch.optim as optim
+from scipy.stats import norm
 
 from deep_fbsde_nn.networks import NAISNet
-
 
 # =============================================================================
 # BLACK-SCHOLES ANALYTICS
@@ -230,8 +229,8 @@ class EuropeanCallBSDESolver:
 
         for i in range(n_steps):
             # Current values
-            t_i = t[i]
-            S_i = S[:, i]
+            t[i]
+            S[:, i]
 
             # BSDE update: dY = r*Y*dt + Z*dW
             # (under risk-neutral measure, drift of Y is r*Y)
@@ -301,7 +300,7 @@ class EuropeanCallBSDESolver:
         p = self.params
         exact_price = black_scholes_call(p.S0, p.K, p.T, p.r, p.sigma)
 
-        print(f"Training European Call Option Pricer (NAIS-Net)")
+        print("Training European Call Option Pricer (NAIS-Net)")
         print(f"  S0={p.S0}, K={p.K}, T={p.T}, r={p.r}, σ={p.sigma}")
         print(f"  Exact BS price: {exact_price:.6f}")
         print(f"  Iterations: {n_iterations}, Batch: {batch_size}")

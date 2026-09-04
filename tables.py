@@ -21,12 +21,12 @@ else:
     project_root = script_dir
 sys.path.insert(0, str(project_root))
 
-import torch
-import numpy as np
 import argparse
-import time
 from dataclasses import dataclass
-from typing import Optional, Dict, List
+from typing import Dict, List, Optional
+
+import numpy as np
+import torch
 
 
 # Stub class to allow loading XVA checkpoints
@@ -60,10 +60,10 @@ def get_device(device_str: str = "auto") -> torch.device:
 
 
 try:
-    from deep_fbsde_nn.networks import NAISNet
     from deep_fbsde_nn.equations import BlackScholesBarenblattEquation, BlackScholesEquation
     from deep_fbsde_nn.equations.hjb import HJBEquation
-    from deep_fbsde_nn.solvers import StandardSolver, SolverConfig
+    from deep_fbsde_nn.networks import NAISNet
+    from deep_fbsde_nn.solvers import SolverConfig, StandardSolver
 
     HAS_PROJECT_MODULES = True
 except ImportError as e:
@@ -125,7 +125,7 @@ def load_bsb_results(model_path: str, device: torch.device) -> ExperimentResult:
                 else float(ckpt["Y0"])
             )
         else:
-            print(f"  Warning: No Y0 found in checkpoint, using placeholder")
+            print("  Warning: No Y0 found in checkpoint, using placeholder")
             Y0_pred = exact_Y0  # placeholder
 
         rel_error = abs(Y0_pred - exact_Y0) / exact_Y0 * 100
@@ -205,14 +205,14 @@ def load_bs_basket_results(
                 else float(ckpt["Y0"])
             )
         else:
-            print(f"  Warning: No Y0 found in checkpoint")
+            print("  Warning: No Y0 found in checkpoint")
             Y0_pred = 0.0
 
         # We can't compute MC without modules, use placeholder
         mc_price = Y0_pred  # Will show 0% error as placeholder
         mc_stderr = 0.001
 
-        print(f"  Note: Cannot compute MC benchmark without project modules")
+        print("  Note: Cannot compute MC benchmark without project modules")
         print(f"  Using stored Y0 = {Y0_pred:.6f}")
 
         return ExperimentResult(
@@ -287,7 +287,7 @@ def load_hjb_results(model_path: str, device: torch.device) -> ExperimentResult:
                 else float(ckpt["Y0"])
             )
         else:
-            print(f"  Warning: No Y0 found in checkpoint")
+            print("  Warning: No Y0 found in checkpoint")
             Y0_pred = 0.0
 
         # HJB analytical: u(0,0) = -1/lambda * log(E[exp(-lambda*g(X_T))])
@@ -295,7 +295,7 @@ def load_hjb_results(model_path: str, device: torch.device) -> ExperimentResult:
         # Use placeholder
         ref_u = Y0_pred
 
-        print(f"  Note: Cannot compute MC benchmark without project modules")
+        print("  Note: Cannot compute MC benchmark without project modules")
 
         return ExperimentResult(
             name="HJB",
@@ -309,7 +309,7 @@ def load_hjb_results(model_path: str, device: torch.device) -> ExperimentResult:
     eq = HJBEquation(dimension=dim, lambda_val=1.0, device=device)
 
     # MC benchmark
-    print(f"  Computing MC benchmark...")
+    print("  Computing MC benchmark...")
     ref_u = eq.exact_solution(0.0, n_mc=100000).item()
 
     # Load network
@@ -393,12 +393,12 @@ def load_xva_results(model_path: str, device: torch.device) -> XVAResult:
     if "lc" in name:
         try:
             lambda_c = float(name.split("lc")[1].split("_")[0])
-        except:
+        except Exception:
             pass
     if "lb" in name:
         try:
             lambda_b = float(name.split("lb")[1].split(".pt")[0])
-        except:
+        except Exception:
             pass
 
     # Default XVA parameters
@@ -688,8 +688,8 @@ Relative Difference (\%) & \multicolumn{{2}}{{c}}{{{rel_diff:.2f}\%}} \\
 \end{{tabular}}
 \begin{{tablenotes}}
 \small
-\item Note: European call, $S_0 = K = {x.S0:.0f}$, $r = {x.r:.0%}$, $\sigma = {x.sigma:.0%}$, $T = {x.T:.0f}$. 
-Credit: $\lambda_c = {x.lambda_c:.0%}$, $\lambda_b = {x.lambda_b:.0%}$, $R = {x.R_c:.0%}$. 
+\item Note: European call, $S_0 = K = {x.S0:.0f}$, $r = {x.r:.0%}$, $\sigma = {x.sigma:.0%}$, $T = {x.T:.0f}$.
+Credit: $\lambda_c = {x.lambda_c:.0%}$, $\lambda_b = {x.lambda_b:.0%}$, $R = {x.R_c:.0%}$.
 Funding: $r_f = {x.r_f:.0%}$.
 \end{{tablenotes}}
 \end{{table}}
@@ -707,14 +707,14 @@ Funding: $r_f = {x.r_f:.0%}$.
 \toprule
 \textbf{{Category}} & \textbf{{Parameter}} & \textbf{{Value}} \\
 \midrule
-\multirow{{5}}{{*}}{{Option}} 
+\multirow{{5}}{{*}}{{Option}}
 & Initial spot $S_0$ & {x.S0:.0f} \\
 & Strike $K$ & {x.K:.0f} \\
 & Maturity $T$ & {x.T:.0f} year \\
 & Risk-free rate $r$ & {x.r:.0%} \\
 & Volatility $\sigma$ & {x.sigma:.0%} \\
 \midrule
-\multirow{{4}}{{*}}{{Credit}} 
+\multirow{{4}}{{*}}{{Credit}}
 & Counterparty default intensity $\lambda_c$ & {x.lambda_c:.0%} \\
 & Own default intensity $\lambda_b$ & {x.lambda_b:.0%} \\
 & Counterparty recovery $R_c$ & {x.R_c:.0%} \\
@@ -839,7 +839,7 @@ def main():
                 )
 
     if xva_result:
-        print(f"\nXVA:")
+        print("\nXVA:")
         print(f"  BS Price:   {xva_result.bs_price:.6f}")
         print(f"  BSDE Price: {xva_result.bsde_price:.6f}")
         print(f"  MC Price:   {xva_result.mc_price:.6f}")
