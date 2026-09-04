@@ -60,7 +60,7 @@ def main():
     result = solver.validate()
 
     # Predicted vs exact along a few sample paths
-    n_paths, n_steps = 6, 40
+    n_paths, n_steps = 5, 40
     t, dW, _ = solver.generate_paths(n_paths, n_steps)
     X = eq.sample_initial_condition(n_paths)
     times = t.cpu().numpy()
@@ -78,11 +78,14 @@ def main():
     exact = np.array(exact)
 
     fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
+    # Same color for a path's prediction (solid) and its exact values (dashed)
+    # so the tracking is visually pairable.
     for i in range(n_paths):
-        ax.plot(times, exact[:, i], "k--", alpha=0.5, lw=1)
-        ax.plot(times, pred[:, i], alpha=0.85, lw=1.4)
+        color = plt.cm.tab10(i % 10)
+        ax.plot(times, exact[:, i], "--", color=color, alpha=0.55, lw=1.2)
+        ax.plot(times, pred[:, i], "-", color=color, alpha=0.9, lw=1.5)
     ax.plot([], [], "k--", label="exact $u(t, X_t)$")
-    ax.plot([], [], "-", color="tab:blue", label="Deep BSDE prediction")
+    ax.plot([], [], "k-", label="Deep BSDE prediction")
     ax.set_xlabel("time $t$")
     ax.set_ylabel("$u(t, X_t)$")
     ax.set_title(
