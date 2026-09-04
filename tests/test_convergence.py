@@ -171,3 +171,52 @@ def test_hjb_d100_matches_published_value():
     han_published = 4.5901
     rel_error = abs(y0_pred - han_published) / han_published * 100
     assert rel_error < 2.0, (y0_pred, han_published, rel_error)
+
+
+def test_allen_cahn_d100_matches_published_value():
+    """Canonical Allen-Cahn benchmark: u(0,0) = 0.052802 at d=100
+    (branching-diffusion value from Han et al. 2018). Calibrated run: 0.98%."""
+    from deep_fbsde_nn.equations import AllenCahnEquation
+    from deep_fbsde_nn.solvers import StepwiseSolver
+
+    torch.manual_seed(0)
+    np.random.seed(0)
+    eq = AllenCahnEquation(dimension=100)
+    config = SolverConfig(
+        batch_size=256, num_timesteps=20, learning_rate=5e-4,
+        num_iterations=3000, use_mlmc=False, print_every=1500,
+    )
+    solver = StepwiseSolver(eq, config, device="cpu", hidden_dim=110)
+    solver.train()
+
+    y0_pred = solver.predict().item()
+    reference = AllenCahnEquation.KNOWN_VALUE_D100
+    rel_error = abs(y0_pred - reference) / reference * 100
+    assert rel_error < 3.0, (y0_pred, reference, rel_error)
+
+
+def test_basket_call_matches_monte_carlo():
+    """BS basket (D=5) vs the equation's own seeded MC benchmark — both price
+    the same (softplus-smoothed) payoff, so this is an internal-consistency
+    validation of the solver against simulation. Calibrated run: 0.62%."""
+    from deep_fbsde_nn.equations import BlackScholesEquation
+    from deep_fbsde_nn.solvers import StepwiseSolver
+
+    torch.manual_seed(0)
+    np.random.seed(0)
+    eq = BlackScholesEquation(dimension=5)
+    mc_price, mc_se = eq.monte_carlo_price(n_paths=500_000)
+
+    config = SolverConfig(
+        batch_size=64, num_timesteps=20, learning_rate=5e-3,
+        num_iterations=2000, use_mlmc=False, print_every=1000,
+    )
+    solver = StepwiseSolver(eq, config, device="cpu", hidden_dim=32)
+    solver.train(n_iter=2000)
+    for group in solver.optimizer.param_groups:
+        group["lr"] = 1e-3
+    solver.train(n_iter=1000)
+
+    y0_pred = solver.predict().item()
+    tolerance = max(0.03 * mc_price, 5 * mc_se)
+    assert abs(y0_pred - mc_price) < tolerance, (y0_pred, mc_price, mc_se)

@@ -107,12 +107,22 @@ class BlackScholesBarenblattEquation(BaseEquation):
 
 class AllenCahnEquation(BaseEquation):
     """
-    Allen-Cahn equation - semilinear PDE test case.
+    Allen-Cahn equation — the canonical deep-BSDE benchmark specification.
 
-    PDE:
-        ∂u/∂t + (1/2)Δu + u - u³ = 0
-        u(T, x) = 1 / √(1 + ||x||²)
+    PDE (Han, Jentzen, E 2018, PNAS 115(34)):
+        ∂u/∂t + Δu + u - u³ = 0
+        u(T, x) = 1 / (2 + 0.4·||x||²)
+    with dX = √2 dW (so the generator is the full Laplacian Δ) and T = 0.3.
+
+    Reference value (branching-diffusion benchmark, reused across the
+    deep-BSDE literature): u(0, 0) ≈ 0.052802 at d = 100.
+
+    Note: v0.1 shipped a nonstandard variant (σ = I, g = 1/√(1+||x||²)) with
+    no reference value anywhere; v0.2 aligns with the literature-standard
+    test case so the equation is validatable.
     """
+
+    KNOWN_VALUE_D100 = 0.052802  # u(0, 0), branching-diffusion benchmark
 
     def __init__(
         self,
@@ -126,6 +136,7 @@ class AllenCahnEquation(BaseEquation):
             terminal_time=terminal_time,
         )
         super().__init__(config, device)
+        self.sqrt_2 = np.sqrt(2.0)
 
     def drift(self, t: torch.Tensor, X: torch.Tensor,
               Y: torch.Tensor, Z: torch.Tensor) -> torch.Tensor:
@@ -133,18 +144,24 @@ class AllenCahnEquation(BaseEquation):
 
     def diffusion(self, t: torch.Tensor, X: torch.Tensor,
                   Y: torch.Tensor) -> torch.Tensor:
-        return torch.ones_like(X)
+        """σ = √2 · I (canonical: generator = Δ)."""
+        return torch.full_like(X, self.sqrt_2)
 
     def driver(self, t: torch.Tensor, X: torch.Tensor,
                Y: torch.Tensor, Z: torch.Tensor) -> torch.Tensor:
-        """f = u - u³: the PDE is ∂u/∂t + (1/2)Δu + (u - u³) = 0, and
-        driver() returns f from that PDE form (dY = -f dt + Zᵀσ dW)."""
+        """f = u - u³: the PDE is ∂u/∂t + Δu + (u - u³) = 0, and driver()
+        returns f from that form (dY = -f dt + Zᵀσ dW; σ=√2 supplies Δ)."""
         return Y - Y ** 3
 
     def terminal(self, X: torch.Tensor) -> torch.Tensor:
-        """g(x) = 1 / √(1 + ||x||²)"""
+        """g(x) = 1 / (2 + 0.4·||x||²) — the canonical benchmark payoff."""
         norm_sq = torch.sum(X ** 2, dim=1, keepdim=True)
-        return 1.0 / torch.sqrt(1.0 + norm_sq)
+        return 1.0 / (2.0 + 0.4 * norm_sq)
+
+    def terminal_gradient(self, X: torch.Tensor) -> torch.Tensor:
+        """∇g(x) = -0.8·x / (2 + 0.4·||x||²)²"""
+        norm_sq = torch.sum(X ** 2, dim=1, keepdim=True)
+        return -0.8 * X / (2.0 + 0.4 * norm_sq) ** 2
 
     def sample_initial_condition(self, batch_size: int = 1) -> torch.Tensor:
         return torch.zeros(batch_size, self.D, device=self.device)

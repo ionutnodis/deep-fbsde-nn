@@ -42,12 +42,6 @@ Deferred work with context. Generated during /plan-eng-review of the v0.1 releas
 - **Context:** v0.1 ships tested `examples/quickstart.py` instead (eng review outside-voice finding #8; Colab badge deferred in CEO review D2.3 — "adds a moving part the day before release").
 - **Depends on:** CI from Stage 4.
 
-### Reference solutions for AllenCahn and the BS basket
-- **What:** `AllenCahnEquation` and `BlackScholesEquation` (basket) ship in 0.1 with shape tests only — no reference to validate against. Add an MC benchmark for the basket and literature reference values for AllenCahn (e.g. the d=100 value from Han-Jentzen-E 2018), wiring both into the convergence suite.
-- **Why:** Closes the last validation gap: after this, every exported equation is validated, not just the three with cheap references (BSB, D=1 vanilla call, HJB).
-- **Context:** Surfaced by CEO-review spec loop (iteration 1, issue 1). Note: AllenCahn isn't even listed in the README's equation table today — the Stage 1 README truth pass should add it with an honest "no reference solution yet" marker.
-- **Depends on:** convergence-suite infrastructure from Stage 2.
-
 ### Docs site
 - **What:** mkdocs-material (or similar) site: API reference from docstrings, math background, equation-authoring guide.
 - **Why:** README + docstrings are the 0.1 documentation surface (also the JOSS fallback position). A site becomes worth it when the API surface or contributor count grows.
