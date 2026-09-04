@@ -29,6 +29,13 @@ jobs:
         run: ruff check .
       - name: Fast test suite
         run: pytest -m "not slow" -q
+      - name: Execute quickstart notebook
+        # Regenerated from the jupytext source of truth and executed —
+        # the committed .ipynb (for Colab) can never silently rot.
+        run: |
+          pip install -q jupytext nbclient ipykernel
+          jupytext --to ipynb examples/quickstart_notebook.py -o /tmp/quickstart.ipynb
+          jupyter execute --kernel_name=python3 /tmp/quickstart.ipynb
 
   package:
     # Packaging E2E: build -> twine check -> clean-venv wheel install -> import
