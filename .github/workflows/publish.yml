@@ -1,0 +1,65 @@
+# Publish via PyPI trusted publishing (tokenless OIDC).
+#
+# One-time setup BEFORE the first tag (both keyed to owner/repo — release gate 2):
+#   1. https://pypi.org/manage/account/publishing/ — add a pending publisher:
+#      project "deep-fbsde-nn", this repo, workflow "publish.yml", environment "pypi".
+#   2. Same on https://test.pypi.org (environment "testpypi").
+#   3. Create the "pypi" and "testpypi" environments in repo Settings -> Environments.
+#
+# Fires on version tags ONLY — never on pull_request (fork PRs must not touch
+# publishing; regular CI has no secrets to leak, which is the point of OIDC).
+# Trusted publishing cannot run inside a reusable workflow (PyPA constraint).
+name: Publish
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build sdist + wheel
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+          twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-testpypi:
+    # Dry run with the same workflow shape as the real publish, so a
+    # misconfigured publisher fails here, not on release day.
+    needs: build
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write # mandatory for trusted publishing, job-level
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  publish-pypi:
+    needs: publish-testpypi
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

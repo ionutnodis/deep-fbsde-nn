@@ -1,0 +1,88 @@
+# CI: lint + fast tests on every push/PR; slow convergence suite on tags and weekly.
+# torch installs from the CPU wheel index — the default Linux wheel bundles CUDA (~2 GB)
+# and would blow the <5 min budget for no benefit on CPU runners.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  schedule:
+    - cron: "17 5 * * 1" # weekly: catch breakage from new torch releases
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install (CPU torch wheels)
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check .
+      - name: Fast test suite
+        run: pytest -m "not slow" -q
+
+  package:
+    # Packaging E2E: build -> twine check -> clean-venv wheel install -> import
+    # -> 5-iteration training smoke. Guards the lean-dependency promise.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Build sdist + wheel
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+          twine check dist/*
+      - name: Clean-venv install + smoke
+        run: |
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install --upgrade pip
+          /tmp/smoke/bin/pip install torch --index-url https://download.pytorch.org/whl/cpu
+          /tmp/smoke/bin/pip install dist/*.whl
+          /tmp/smoke/bin/python -c "import deep_fbsde_nn; print('installed', deep_fbsde_nn.__version__)"
+          /tmp/smoke/bin/python - <<'PY'
+          from deep_fbsde_nn.equations import BlackScholesBarenblattEquation
+          from deep_fbsde_nn.networks import NAISNet
+          from deep_fbsde_nn.solvers import SolverConfig, StandardSolver
+
+          eq = BlackScholesBarenblattEquation(dimension=2)
+          net = NAISNet(input_dim=3, hidden_dim=16, output_dim=1, num_layers=3)
+          config = SolverConfig(
+              batch_size=4, num_timesteps=5, num_iterations=5,
+              use_mlmc=False, print_every=100,
+          )
+          solver = StandardSolver(eq, net, config, device="cpu")
+          solver.train()
+          print("training smoke OK")
+          PY
+
+  slow-convergence:
+    # Correctness-level validation against exact solutions. Runs on tags and
+    # weekly (not per-PR: minutes of CPU training per equation).
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install (CPU torch wheels)
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev]"
+      - name: Convergence suite
+        run: pytest -m slow -q

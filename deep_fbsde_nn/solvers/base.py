@@ -19,14 +19,15 @@ MLMC Schedule:
     75-100%    N=50
 """
 
-import torch
-import torch.nn as nn
-import torch.optim as optim
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Union
+
 import numpy as np
-import time
+import torch
+import torch.nn as nn
+import torch.optim as optim
 
 from ..equations.base import BaseEquation
 from ..utils.device import get_device
@@ -281,11 +282,20 @@ class BaseSolver(ABC):
             return self.model(torch.cat([t_tensor, X], dim=1))
 
     def save(self, path: str):
-        """Save checkpoint."""
+        """Save checkpoint.
+
+        History values are converted to plain Python numbers so the file
+        contains only tensors and primitives — loadable under
+        ``torch.load(weights_only=True)`` with no allowlisting.
+        """
+        history = {
+            key: [value.item() if isinstance(value, np.generic) else value for value in values]
+            for key, values in self.training_history.items()
+        }
         torch.save(
             {
                 "model": self.model.state_dict(),
-                "history": self.training_history,
+                "history": history,
                 "iteration": self.current_iteration,
             },
             path,
@@ -310,7 +320,7 @@ class BaseSolver(ABC):
             except AttributeError:
                 pass
 
-        ckpt = torch.load(path, map_location=self.device, weights_only=False)
+        ckpt = torch.load(path, map_location=self.device, weights_only=True)
         self.model.load_state_dict(ckpt["model"])
         self.training_history = ckpt.get("history", {})
         self.current_iteration = ckpt.get("iteration", 0)

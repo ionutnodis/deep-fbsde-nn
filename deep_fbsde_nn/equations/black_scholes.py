@@ -16,11 +16,18 @@ FBSDE formulation:
 Supports basket calls, puts, best-of, worst-of options.
 """
 
+from typing import Optional, Union
+
+import numpy as np
 import torch
 import torch.nn.functional as F
-import numpy as np
-from typing import Optional, Union
+
 from .base import BaseEquation, EquationConfig
+
+
+def _norm_cdf(x: torch.Tensor) -> torch.Tensor:
+    """Standard normal CDF via torch.erf (keeps core free of scipy)."""
+    return 0.5 * (1.0 + torch.erf(x / np.sqrt(2.0)))
 
 
 class BlackScholesEquation(BaseEquation):
@@ -115,8 +122,10 @@ class BlackScholesEquation(BaseEquation):
     def driver(
         self, t: torch.Tensor, X: torch.Tensor, Y: torch.Tensor, Z: torch.Tensor
     ) -> torch.Tensor:
-        """φ = rY (discounting)."""
-        return self.r * Y
+        """f = -rY: the PDE is ∂u/∂t + rx·∇u + (1/2)Tr(σσᵀD²u) - ru = 0,
+        so under dY = -f dt + Zᵀσ dW the value process gains +rY dt
+        (risk-neutral discounting)."""
+        return -self.r * Y
 
     def terminal(self, X: torch.Tensor) -> torch.Tensor:
         """Payoff g(X) - uses sum(X) like reference."""
@@ -244,8 +253,8 @@ class VanillaCallEquation(BaseEquation):
     def driver(
         self, t: torch.Tensor, X: torch.Tensor, Y: torch.Tensor, Z: torch.Tensor
     ) -> torch.Tensor:
-        """φ = rY."""
-        return self.r * Y
+        """f = -rY (see BlackScholesEquation.driver for the sign convention)."""
+        return -self.r * Y
 
     def terminal(self, X: torch.Tensor) -> torch.Tensor:
         """g(X) = max(sum(X) - K, 0)."""
@@ -262,12 +271,39 @@ class VanillaCallEquation(BaseEquation):
         """Start at X0 = 1.0 for each asset."""
         return torch.full((batch_size, self.D), self.X0_val, device=self.device)
 
-    def exact_solution(self, t: float, X: torch.Tensor) -> torch.Tensor:
-        """No closed form - returns None."""
-        return None
+    def exact_solution(self, t: float, X: torch.Tensor) -> Optional[torch.Tensor]:
+        """
+        Black-Scholes closed form — exact only for D=1.
+
+        For D>1 the payoff max(sum(X)−K, 0) is a basket option with no
+        closed form; returns None (use monte_carlo_price as a benchmark).
+
+        Args:
+            t: Current time
+            X: (M, 1) spot prices (must be positive)
+        Returns:
+            (M, 1) call values, or None when D != 1
+        """
+        if self.D != 1:
+            return None
+
+        tau = self.T - float(t)
+        S = X[:, :1]
+        K = self.strike
+        if tau <= 0:
+            return F.relu(S - K)
+
+        sqrt_tau = np.sqrt(tau)
+        d1 = (torch.log(S / K) + (self.r + 0.5 * self._sigma_val**2) * tau) / (
+            self._sigma_val * sqrt_tau
+        )
+        d2 = d1 - self._sigma_val * sqrt_tau
+        discount = np.exp(-self.r * tau)
+        return S * _norm_cdf(d1) - K * discount * _norm_cdf(d2)
 
     def has_exact_solution(self) -> bool:
-        return False
+        """The closed form applies only to the single-asset case."""
+        return self.D == 1
 
     def monte_carlo_price(self, n_paths: int = 100000) -> tuple:
         """Monte Carlo benchmark for sum-based call."""

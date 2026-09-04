@@ -5,11 +5,12 @@ Checkpointing Utilities
 Model saving, loading, and experiment tracking.
 """
 
-import torch
 import json
-from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, Optional
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+import torch
 
 
 def save_checkpoint(

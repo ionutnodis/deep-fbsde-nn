@@ -18,7 +18,7 @@ References:
 """
 
 from .activations import Sine, get_activation, init_weights_xavier
-from .naisnet import NAISNet, FeedForwardNet
+from .naisnet import FeedForwardNet, NAISNet
 from .wrapper import BlackScholesWrapper
 
 __all__ = [

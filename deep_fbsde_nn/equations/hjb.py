@@ -19,9 +19,11 @@ Reference:
     Han, Jentzen, E (2018): "Solving high-dimensional PDEs using deep learning"
 """
 
-import torch
+from typing import Optional
+
 import numpy as np
-from typing import Union
+import torch
+
 from .base import BaseEquation, EquationConfig
 
 
@@ -71,12 +73,16 @@ class HJBEquation(BaseEquation):
         self, t: torch.Tensor, X: torch.Tensor, Y: torch.Tensor, Z: torch.Tensor
     ) -> torch.Tensor:
         """
-        f = -λ ||∇u||²
-        Since Z = σᵀ∇u = √2∇u, we have ∇u = Z/√2.
-        Therefore f = -λ ||Z/√2||² = -λ/2 ||Z||².
+        f = -λ ||∇u||².
+
+        The solvers' net_u returns the RAW gradient Z = ∇u (the martingale
+        term applies σ explicitly as Zᵀσ dW), so f = -λ ||Z||² directly.
+        The historical -λ/2 ||Z||² assumed Z = σᵀ∇u = √2∇u — a convention
+        this codebase does not use; the factor-2 error was caught by the
+        Cole-Hopf convergence test.
         """
         norm_z_sq = torch.sum(Z**2, dim=1, keepdim=True)
-        return -0.5 * self.lambda_val * norm_z_sq
+        return -self.lambda_val * norm_z_sq
 
     def terminal(self, X: torch.Tensor) -> torch.Tensor:
         """g(x) = ln(0.5 * (1 + ||x||²))"""
@@ -96,10 +102,14 @@ class HJBEquation(BaseEquation):
         return torch.zeros(batch_size, self.D, device=self.device)
 
     def exact_solution(
-        self, t: float, X: torch.Tensor = None, n_mc: int = 100000
+        self,
+        t: float,
+        X: torch.Tensor = None,
+        n_mc: int = 100000,
+        generator: Optional[torch.Generator] = None,
     ) -> torch.Tensor:
         """
-        Compute 'exact' solution via Monte Carlo formula.
+        Compute 'exact' solution via Monte Carlo formula (Cole-Hopf).
 
         u(t, x) = -1/λ * ln( E[ exp(-λ * g(x + √2 * W_{T-t})) ] )
 
@@ -107,6 +117,8 @@ class HJBEquation(BaseEquation):
             t: Current time
             X: State (if None, uses X0)
             n_mc: Number of MC paths for estimation
+            generator: Optional torch.Generator for reproducible draws
+                (without it, samples come from the global RNG)
         """
         if X is None:
             X = self.sample_initial_condition(1)
@@ -126,13 +138,21 @@ class HJBEquation(BaseEquation):
 
         term_sum = torch.zeros(batch_size, 1, device=self.device)
 
-        # Process in chunks to avoid OOM if n_mc is large
+        # Process in chunks to avoid OOM if n_mc is large.
+        # current_n accounts for the final partial chunk — the sample count
+        # must match the n_mc divisor below or the estimate is biased.
         chunk_size = 10000
-        for _ in range(0, n_mc, chunk_size):
-            current_n = min(chunk_size, n_mc)
+        for start in range(0, n_mc, chunk_size):
+            current_n = min(chunk_size, n_mc - start)
 
             # Noise: (current_n, batch_size, D)
-            Z = torch.randn(current_n, batch_size, self.D, device=self.device)
+            Z = torch.randn(
+                current_n,
+                batch_size,
+                self.D,
+                device=self.device,
+                generator=generator,
+            )
 
             # X_T = x + √2 * √tau * Z
             # X shape: (batch_size, D) -> broadcast to (current_n, batch_size, D)
@@ -147,8 +167,9 @@ class HJBEquation(BaseEquation):
             # Accumulate exp(-λ * g)
             term_sum += torch.sum(torch.exp(-self.lambda_val * g_val), dim=0)
 
-        # Average
-        expectation = term_sum / n_mc
+        # Average; clamp away from zero so the log cannot underflow to -inf
+        # when λ·g is large and every exp(-λ·g) rounds to 0.
+        expectation = (term_sum / n_mc).clamp_min(torch.finfo(term_sum.dtype).tiny)
 
         # u = -1/λ * ln(expectation)
         u_val = -(1.0 / self.lambda_val) * torch.log(expectation)

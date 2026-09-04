@@ -28,16 +28,17 @@ from pathlib import Path
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import torch
-import numpy as np
 import argparse
-import time
 import json
+import time
 from datetime import datetime
 
-from deep_fbsde_nn.networks import NAISNet, FeedForwardNet
+import numpy as np
+import torch
+
 from deep_fbsde_nn.equations import BlackScholesBarenblattEquation
-from deep_fbsde_nn.solvers import StandardSolver, SolverConfig
+from deep_fbsde_nn.networks import FeedForwardNet, NAISNet
+from deep_fbsde_nn.solvers import SolverConfig, StandardSolver
 from deep_fbsde_nn.utils import get_device
 from experiments.config import BSB_CONFIG
 

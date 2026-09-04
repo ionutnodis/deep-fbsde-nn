@@ -20,7 +20,7 @@ keywords = [
     "deep-learning",
     "option-pricing",
     "quantitative-finance",
-    "pytorch"
+    "pytorch",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -34,27 +34,29 @@ classifiers = [
     "Topic :: Office/Business :: Financial",
 ]
 
+# Core stays lean on purpose: the installed package imports only torch and numpy.
 dependencies = [
     "torch>=2.0.0",
     "numpy>=1.24.0",
-    "scipy>=1.10.0",
-    "matplotlib>=3.7.0",
-    "pandas>=2.0.0",
-    "tqdm>=4.65.0",
 ]
 
 [project.optional-dependencies]
+# For running the experiments/ scripts from a source checkout.
+# The wheel does not contain experiments/ — this extra exists for git clones.
+experiments = [
+    "matplotlib>=3.7.0",
+    "scipy>=1.10.0",
+]
 dev = [
     "pytest>=7.3.0",
     "pytest-cov",
     "ruff",
-]
-viz = [
-    "tensorboard>=2.12.0",
+    "build",
+    "twine",
 ]
 
 [project.urls]
-Repository = "https://github.com/nodisionut/deep-fbsde-nn"
+Repository = "https://github.com/ionutnodis/deep-fbsde-nn"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -68,6 +70,15 @@ target-version = "py312"
 select = ["E", "F", "I", "W"]
 ignore = ["E501"]
 
+[tool.ruff.lint.per-file-ignores]
+# Experiment scripts bootstrap sys.path before importing the package.
+"experiments/**" = ["E402"]
+# tables.py bootstraps sys.path and uses an import as an availability probe.
+"tables.py" = ["E402", "F401"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+markers = [
+    "slow: long-running convergence tests (run in CI on tag and weekly)",
+]
