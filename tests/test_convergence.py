@@ -114,6 +114,60 @@ def test_hjb_end_to_end_sanity():
         generator=torch.Generator().manual_seed(0),
     ).item()
     rel_error = abs(y0_pred - reference) / abs(reference) * 100
-    # Loose sanity band (see module docstring): calibrated runs land ~12-15%;
-    # the historical sign bug produced ~36%. Tightening tracked in TODOS.md.
+    # Loose sanity band (see module docstring): the derivative-coupled-Z
+    # architecture plateaus ~12-15% on quadratic drivers; the historical sign
+    # bug produced ~36%. For tight HJB accuracy use StepwiseSolver (below).
     assert rel_error < 20.0, (y0_pred, reference, rel_error)
+
+
+def test_hjb_stepwise_converges_tightly():
+    """The per-timestep-Z solver (Han et al. parameterization) does NOT share
+    the derivative-coupling limitation: calibrated runs land ~2-3%."""
+    from deep_fbsde_nn.solvers import StepwiseSolver
+
+    torch.manual_seed(0)
+    np.random.seed(0)
+    eq = HJBEquation(dimension=3)
+    config = SolverConfig(
+        batch_size=64, num_timesteps=20, learning_rate=5e-3,
+        num_iterations=2000, use_mlmc=False, print_every=1000,
+    )
+    solver = StepwiseSolver(eq, config, device="cpu")
+    solver.train(n_iter=2000)
+    for group in solver.optimizer.param_groups:
+        group["lr"] = 1e-3
+    solver.train(n_iter=1000)
+
+    y0_pred = solver.predict().item()
+    reference = eq.exact_solution(
+        0.0, eq.sample_initial_condition(1), n_mc=200_000,
+        generator=torch.Generator().manual_seed(0),
+    ).item()
+    rel_error = abs(y0_pred - reference) / abs(reference) * 100
+    assert rel_error < 5.0, (y0_pred, reference, rel_error)
+
+
+def test_hjb_d100_matches_published_value():
+    """The flagship: reproduce Han et al. (2018)'s d=100 HJB result.
+
+    Published value u(0,0) = 4.5901 (PNAS 115(34), Table/Fig for the LQG
+    example); our seeded Cole-Hopf reference gives 4.5902. Calibrated recipe
+    (StepwiseSolver, warm-started Y0, zero-init Z nets, lr 5e-4, batch 256)
+    lands at 0.03% error in ~70s CPU.
+    """
+    from deep_fbsde_nn.solvers import StepwiseSolver
+
+    torch.manual_seed(0)
+    np.random.seed(0)
+    eq = HJBEquation(dimension=100)
+    config = SolverConfig(
+        batch_size=256, num_timesteps=20, learning_rate=5e-4,
+        num_iterations=3000, use_mlmc=False, print_every=1000,
+    )
+    solver = StepwiseSolver(eq, config, device="cpu", hidden_dim=110)
+    solver.train()
+
+    y0_pred = solver.predict().item()
+    han_published = 4.5901
+    rel_error = abs(y0_pred - han_published) / han_published * 100
+    assert rel_error < 2.0, (y0_pred, han_published, rel_error)

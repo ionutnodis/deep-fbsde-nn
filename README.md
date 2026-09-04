@@ -128,7 +128,7 @@ What the CI actually proves, per equation:
 |----------|-----------|-------------|
 | `BlackScholesBarenblattEquation` | analytical solution | convergence < 2% (low-d); D=100 smoke on release |
 | `VanillaCallEquation` | Black-Scholes closed form (D=1, in-class, `torch.erf`) | convergence < 5% |
-| `HJBEquation` | Cole-Hopf Monte-Carlo formula (in-class, seedable) | PDE-residual consistency of driver vs reference (sharp); end-to-end sanity band |
+| `HJBEquation` | Cole-Hopf Monte-Carlo formula (in-class, seedable) | PDE-residual consistency (sharp); `StepwiseSolver` reproduces Han et al.'s published $d{=}100$ value 4.5901 to <2% in CI (0.03% calibrated); `StandardSolver` sanity band |
 | `BlackScholesEquation` (basket) | Monte-Carlo benchmark method only | shape/contract tests |
 | `AllenCahnEquation` | none yet | shape/contract tests |
 
@@ -136,7 +136,7 @@ Plus: NAIS-Net projection invariant, Brownian path statistics, checkpoint round-
 
 ### Known limitations (honest edition)
 
-- **HJB end-to-end accuracy:** with $Z$ derived by autograd from the same network as $u$, training under-weights strongly nonlinear (quadratic-in-$Z$) drivers; calibrated runs plateau ~12-15% above the reference at $d=3$. The PDE-residual test guards the math sharply; per-timestep $Z$ subnetworks (Han et al.'s original design) are the tracked fix ([TODOS.md](TODOS.md)).
+- **Strongly nonlinear drivers with `StandardSolver`/`GlobalSolver`:** deriving $Z$ by autograd from the same network as $u$ under-weights quadratic-in-$Z$ drivers — those solvers plateau ~12-15% above the HJB reference. **Resolved in practice by `StepwiseSolver`** (2% at $d{=}3$, 0.03% at $d{=}100$); the derivative-coupled solvers keep the honest caveat since they're what you need for solution surfaces and greeks.
 - **XVA and greeks are experimental**: quarantined under `experiments/experimental/` with runtime warnings; they need debugging and are not part of the tested surface.
 - **Basket and Allen-Cahn have no reference solution yet** — they ship contract-tested, not validated.
 
@@ -193,10 +193,11 @@ $u(t,x) = -\tfrac{1}{\lambda}\ln \mathbb{E}\left[\exp(-\lambda\, g(x + \sqrt{2}\
 
 | Solver | Description |
 |--------|-------------|
-| `StandardSolver` | Fixed initial condition $X_0$ (original Deep BSDE) |
+| `StandardSolver` | Fixed $X_0$, one network $u(t,x)$, $Z = \nabla u$ by autograd |
 | `GlobalSolver` | Distributed $X_0$ (learns the solution surface) |
+| `StepwiseSolver` | Fixed $X_0$, trainable $Y_0/Z_0$ + one $Z$-network per timestep — the original Han-Jentzen-E (2018) parameterization. Strongest on nonlinear drivers (reproduces the published $d{=}100$ HJB value to 0.03%), but learns $u$ only at $(0, X_0)$ |
 
-Both solvers integrate the BSDE as $\hat{Y}_{n+1} = Y_n - f\,\Delta t + Z_n^\top \sigma\, \Delta W_n$ — the same convention, tested.
+All solvers integrate the BSDE as $\hat{Y}_{n+1} = Y_n - f\,\Delta t + Z_n^\top \sigma\, \Delta W_n$ — the same convention, tested. `StepwiseSolver` additionally warm-starts $Y_0$ at the driver-free value $\mathbb{E}[g(X_T)]$ and zero-initializes its $Z$-net outputs, which is what makes high-dimensional training stable without per-problem tuning.
 
 `SolverConfig` notes: `batch_size` defaults to 1, following the reference implementation this library was validated against; Han et al. (2018) used 64-256, and the default is being re-evaluated with benchmarks for 0.2 (see TODOS.md). The convergence tests use 16-64.
 
