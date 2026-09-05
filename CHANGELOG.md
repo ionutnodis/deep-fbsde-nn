@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased (0.3.0-dev)
+## 0.3.0 — 2026-09-05
+
+XVA in the public API, and greeks that hold far from the money.
 
 ### Added
 - **`XVAEquation`** — Burgard-Kjaer XVA pricing in the public API, with an
