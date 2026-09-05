@@ -170,14 +170,15 @@ Reproducible with one command — every row is a seeded run against an exact sol
 ```
 deep-fbsde-nn/
 ├── deep_fbsde_nn/           # The installed package (torch + numpy only)
-│   ├── equations/           # BaseEquation + BS, BSB, Allen-Cahn, HJB, vanilla call
+│   ├── equations/           # BaseEquation + BS, BSB, Allen-Cahn, HJB, vanilla call, XVA
 │   ├── networks/            # NAIS-Net, FeedForward, activations, BS wrapper
-│   ├── solvers/             # StandardSolver (fixed X0), GlobalSolver (distributed X0)
+│   ├── solvers/             # StandardSolver (fixed X0), GlobalSolver (distributed X0), StepwiseSolver (per-step Z-nets)
 │   └── utils/               # device, metrics, checkpointing
 ├── tests/                   # pytest suite (fast + slow-marked convergence)
-├── examples/quickstart.py   # CI-tested quickstart
+├── examples/quickstart.py   # CI-tested quickstart (+ Colab notebook)
+├── benchmarks/              # seeded benchmark harness (python benchmarks/run.py)
 ├── experiments/             # research scripts (need the [experiments] extra)
-│   └── experimental/        # XVA + greeks — known-broken, emits warnings
+│   └── experimental/        # greeks plotting — experimental, warns at import
 ├── docs/                    # design docs + release material
 └── tables.py                # results-table generator for experiments
 ```

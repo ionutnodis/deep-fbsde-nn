@@ -33,7 +33,6 @@ Every code path needs a test. Correctness claims need a reference: an exact solu
 
 ## Good first issues
 
-- `net_u` passes `retain_graph=True` unconditionally (`solvers/base.py`) — only needed while training.
 - NAISNet/FeedForwardNet duplicate `count_parameters`/`__repr__` — extract a shared base.
 - Add a new equation subclass with a reference solution (a guided template for exactly this is in the README's "Extending the Library").
 
