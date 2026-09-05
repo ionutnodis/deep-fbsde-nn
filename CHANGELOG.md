@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased (0.3.0-dev)
+## 0.3.0 — 2026-09-05
+
+XVA in the public API, and greeks that hold far from the money.
 
 ### Added
 - **`XVAEquation`** — Burgard-Kjaer XVA pricing in the public API, with an
@@ -8,10 +10,15 @@
   cross-validated against the classical Monte-Carlo oracle) and analytic
   delta. Reduces exactly to `BlackScholesEquation` when adjustments vanish.
 - **`StepwiseSolver.delta0()`** and the anchored pointwise greeks recipe:
-  price + delta at any spot with uniform accuracy (delta error ≤0.011 across
-  S=75-130 for XVA — closing the v0.2 far-from-spot greeks caveat).
+  price + delta at any spot, with uniformly accurate deltas (error ≤0.011
+  across S=75-130 for XVA — closing the v0.2 far-from-spot greeks caveat).
 - `BaseSolver.get_price_and_delta` (generic autograd delta for u(t,x) solvers).
 - XVA row in the benchmark table.
+
+### Changed
+- Release pipeline hardening: the publish workflow now refuses a tag that
+  doesn't match the package version, and the PyPI publish action is pinned
+  by commit SHA in both OIDC jobs.
 
 ## 0.2.0 — 2026-09-05
 
@@ -25,7 +32,7 @@ The benchmark release: every equation validated, every number reproducible.
   value E[g(X_T)] and zero-initialized Z-net outputs.
 - **Benchmark harness** (`python benchmarks/run.py`): 11-row seeded
   equation × dimension table (rel. error + wall time), spliced into the
-  README. 9 of 11 rows under 1%.
+  README. 8 of 11 rows under 1%.
 - **Reference validation for every exported equation**, including the
   published branching-diffusion value for Allen-Cahn (0.052802 at d=100,
   reproduced to 0.98%) and a seeded MC benchmark for the BS basket (0.62%).

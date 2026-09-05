@@ -10,7 +10,9 @@ Features:
 - NAIS-Net architecture with spectrally projected residual blocks
 - Standard Deep BSDE (fixed initial condition)
 - Global Deep BSDE (distributed initial conditions)
-- Black-Scholes, Black-Scholes-Barenblatt, Allen-Cahn, and HJB equations
+- Stepwise Deep BSDE (the original Han-Jentzen-E parameterization)
+- Black-Scholes, Black-Scholes-Barenblatt, Allen-Cahn, HJB, and
+  Burgard-Kjaer XVA equations
 
 References:
 - Han, Jentzen, E (2018): "Solving high-dimensional PDEs using deep learning"
