@@ -26,7 +26,7 @@ Every code path needs a test. Correctness claims need a reference: an exact solu
 
 ## Conventions worth knowing
 
-- **Driver sign:** `driver()` returns the `f` of the PDE form `∂t u + μ·∇u + ½Tr(σσᵀD²u) + f = 0`; both solvers integrate `dY = -f dt + Zᵀσ dW`. `Z` is the raw gradient `∇u`.
+- **Driver sign:** `driver()` returns the `f` of the PDE form `∂t u + μ·∇u + ½Tr(σσᵀD²u) + f = 0`; all solvers integrate `dY = -f dt + Zᵀσ dW`. `Z` is the raw gradient `∇u`.
 - **Lean core:** the installed package imports only `torch` and `numpy`. Plotting and scipy belong in `experiments/`.
 - **Checkpoints** must stay loadable under `torch.load(weights_only=True)` — tensors and Python primitives only.
 - **Experimental code** lives in `experiments/experimental/` and warns at import.
@@ -38,4 +38,4 @@ Every code path needs a test. Correctness claims need a reference: an exact solu
 
 ## Releases (maintainer)
 
-Tag `v*` → CI runs the slow suite → `publish.yml` builds, dry-runs on TestPyPI, publishes to PyPI via trusted publishing → Zenodo archives the release. Regenerate the hero figure (`python experiments/make_hero_figure.py`) before tagging.
+Tag `v*` → CI runs the slow suite → `publish.yml` builds, dry-runs on TestPyPI, publishes to PyPI via trusted publishing → Zenodo archives the release. `publish.yml` fails fast if the tag doesn't match `pyproject.toml`'s version, so bump the version (and `CITATION.cff`) before tagging. Regenerate the hero figure (`python experiments/make_hero_figure.py`) before tagging.

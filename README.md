@@ -49,7 +49,7 @@ $$
 \frac{\partial u}{\partial t} + \mu \cdot \nabla u + \frac{1}{2} \text{Tr}\left(\sigma \sigma^\top D^2 u\right) + f(t, x, u, \nabla u) = 0
 $$
 
-with terminal condition $u(T, x) = g(x)$. Every equation's `driver()` returns exactly the $f$ from this PDE form — one sign convention, shared by both solvers, enforced by the test suite.
+with terminal condition $u(T, x) = g(x)$. Every equation's `driver()` returns exactly the $f$ from this PDE form — one sign convention, shared by all solvers, enforced by the test suite.
 
 ## Features
 
@@ -132,7 +132,7 @@ What the CI actually proves, per equation:
 | `HJBEquation` | Cole-Hopf Monte-Carlo formula (in-class, seedable) | PDE-residual consistency (sharp); `StepwiseSolver` reproduces Han et al.'s published $d{=}100$ value 4.5901 to <2% in CI (0.03% calibrated); `StandardSolver` sanity band |
 | `BlackScholesEquation` (basket) | seeded Monte-Carlo benchmark (same smoothed payoff) | `StepwiseSolver` within max(3%, 5·SE) of MC, D=5 |
 | `AllenCahnEquation` | published branching-diffusion value 0.052802 (canonical Han et al. spec) | `StepwiseSolver` < 3% at $d{=}100$ (0.98% calibrated) |
-| `XVAEquation` | closed form $e^{-c(T-t)}\cdot BS$ (D=1 long options; cross-validated vs a classical MC oracle) | anchored `StepwiseSolver`: price ≤0.2% at the money, delta error ≤0.011 across S=75-130 |
+| `XVAEquation` | closed form $e^{-c(T-t)}\cdot BS$ (D=1 long options; cross-validated vs a classical MC oracle) | anchored `StepwiseSolver` at S ∈ {75, 100, 130}: price < max(8%, 0.1 abs) and delta error < 0.02 (calibrated: 0.18% ATM price, worst delta 0.011 across S=75-130) |
 
 Plus: NAIS-Net projection invariant, Brownian path statistics, checkpoint round-trips under `weights_only=True`, packaging E2E (build → clean-venv install → import → training smoke), and this README's quickstart at reduced scale.
 
