@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased (0.3.0-dev)
+
+### Added
+- **`XVAEquation`** — Burgard-Kjaer XVA pricing in the public API, with an
+  in-class closed form for long options (driver linearizes on V ≥ 0;
+  cross-validated against the classical Monte-Carlo oracle) and analytic
+  delta. Reduces exactly to `BlackScholesEquation` when adjustments vanish.
+- **`StepwiseSolver.delta0()`** and the anchored pointwise greeks recipe:
+  price + delta at any spot with uniform accuracy (delta error ≤0.011 across
+  S=75-130 for XVA — closing the v0.2 far-from-spot greeks caveat).
+- `BaseSolver.get_price_and_delta` (generic autograd delta for u(t,x) solvers).
+- XVA row in the benchmark table.
+
 ## 0.2.0 — 2026-09-05
 
 The benchmark release: every equation validated, every number reproducible.

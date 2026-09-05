@@ -4,11 +4,10 @@ Deferred work with context. Generated during /plan-eng-review of the v0.1 releas
 
 ## 0.2 candidates
 
-### Promote XVA into the public API (0.3 headline)
-- **What:** `XVAEquation(BaseEquation)` in the package with the Burgard-Kjaer driver, priced via library solvers; `GlobalSolver` backing for the full price/greeks surface (fixes the far-from-spot delta gap the 0.2 validation documented); retire the bespoke loop in `experiments/exp_xva.py` to a thin driver script.
-- **Why:** "Price and risk-manage XVA with the library" becomes real API instead of an experiment; GlobalSolver was built for exactly this surface-learning job.
-- **Context:** 0.2 validated the experiment in place (price 4.1%, components tight vs classical MC — tests/test_xva.py). Chosen as option C in the 0.2 decision round: validate now, promote in 0.3 with its own design pass.
-- **Depends on:** 0.2 shipped.
+### Single-network pricing surface (research)
+- **What:** Learn u(t,S) across wide moneyness in one network. Blocked by a multi-scale loss floor: value²-weighted squared error starves OTM wings, relative reweighting destroys the body (both measured during 0.3), and the terminal-gradient target is discontinuous at the strike.
+- **Context:** 0.3 shipped the practical alternative instead — anchored pointwise `StepwiseSolver` evaluation (delta ≤0.011 across S=75-130). Candidate directions: control variates with better structure, strike-smoothed terminal gradients, per-region networks.
+- **Depends on:** nothing; research item.
 
 ### Benchmark-first 0.2 release — now also the launch event
 - **What:** One command regenerates an equation × dimension (10/50/100/200) table of relative error + runtime, published in the README; loosened-tolerance version doubles as a regression suite. Per the CEO-review outside voice (2026-09-04): v0.1 tags quietly, and 0.2 is when the announcement fires, the JOSS submission goes in, and Discussions + seeded good-first-issues activate — the benchmark is the story, and the one-shot channels (Show HN) are spent on it.

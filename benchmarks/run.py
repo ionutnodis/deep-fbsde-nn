@@ -34,6 +34,7 @@ from deep_fbsde_nn.equations import (
     BlackScholesEquation,
     HJBEquation,
     VanillaCallEquation,
+    XVAEquation,
 )
 from deep_fbsde_nn.networks import NAISNet
 from deep_fbsde_nn.solvers import SolverConfig, StandardSolver, StepwiseSolver
@@ -151,6 +152,22 @@ def hjb_stepwise(dim, quick=False):
     return Case("Hamilton-Jacobi-Bellman", dim, "Stepwise", kind, run, quick)
 
 
+def xva_stepwise():
+    def run():
+        _seed()
+        eq = XVAEquation(dimension=1)
+        exact = eq.exact_solution(0.0, torch.tensor([[eq.S0]])).item()
+        pred, secs = _stepwise(
+            eq, batch=64, lr=5e-3, iters=2000, hidden=32, fine_lr=1e-3, fine_iters=1000
+        )
+        return pred, exact, secs
+
+    return Case(
+        "XVA call (Burgard-Kjaer)", 1, "Stepwise",
+        "closed form e^-cT * BS (MC cross-validated)", run, quick=True,
+    )
+
+
 def allen_cahn_stepwise():
     def run():
         _seed()
@@ -185,6 +202,7 @@ CASES = [
     vanilla_standard(),
     basket_stepwise(5, quick=True),
     basket_stepwise(25),
+    xva_stepwise(),
     hjb_stepwise(3, quick=True),
     hjb_stepwise(20),
     hjb_stepwise(100),

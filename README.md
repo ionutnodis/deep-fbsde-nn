@@ -55,7 +55,7 @@ with terminal condition $u(T, x) = g(x)$. Every equation's `driver()` returns ex
 
 - **High-dimensional PDEs**: experiments at $d = 10, 50, 100$; see [Validation](#validation) for what CI proves
 - **NAIS-Net architecture**: spectral projection conditions every residual block (eigenvalues of the state matrix confined to $[\varepsilon, 1-\varepsilon]$)
-- **Multiple equation types**: Black-Scholes (basket + vanilla), Black-Scholes-Barenblatt, Allen-Cahn, Hamilton-Jacobi-Bellman
+- **Multiple equation types**: Black-Scholes (basket + vanilla), Black-Scholes-Barenblatt, Allen-Cahn, Hamilton-Jacobi-Bellman, XVA (Burgard-Kjaer)
 - **MLMC training**: Multi-Level Monte Carlo progressive time-stepping for cheaper early iterations
 - **Device agnostic**: automatic detection of CUDA, MPS (Apple Silicon), or CPU
 - **Lean install**: the core package depends on `torch` and `numpy` only
@@ -132,6 +132,7 @@ What the CI actually proves, per equation:
 | `HJBEquation` | Cole-Hopf Monte-Carlo formula (in-class, seedable) | PDE-residual consistency (sharp); `StepwiseSolver` reproduces Han et al.'s published $d{=}100$ value 4.5901 to <2% in CI (0.03% calibrated); `StandardSolver` sanity band |
 | `BlackScholesEquation` (basket) | seeded Monte-Carlo benchmark (same smoothed payoff) | `StepwiseSolver` within max(3%, 5·SE) of MC, D=5 |
 | `AllenCahnEquation` | published branching-diffusion value 0.052802 (canonical Han et al. spec) | `StepwiseSolver` < 3% at $d{=}100$ (0.98% calibrated) |
+| `XVAEquation` | closed form $e^{-c(T-t)}\cdot BS$ (D=1 long options; cross-validated vs a classical MC oracle) | anchored `StepwiseSolver`: price ≤0.2% at the money, delta error ≤0.011 across S=75-130 |
 
 Plus: NAIS-Net projection invariant, Brownian path statistics, checkpoint round-trips under `weights_only=True`, packaging E2E (build → clean-venv install → import → training smoke), and this README's quickstart at reduced scale.
 
@@ -143,16 +144,17 @@ Reproducible with one command — every row is a seeded run against an exact sol
 | Equation | d | Solver | Reference | Rel. error | Time |
 |---|---|---|---|---|---|
 | Black-Scholes-Barenblatt | 2 | Standard | exact solution | 1.89% | 5s |
-| Black-Scholes-Barenblatt | 10 | Stepwise | exact solution | 0.11% | 15s |
-| Black-Scholes-Barenblatt | 50 | Stepwise | exact solution | 0.12% | 32s |
-| Black-Scholes-Barenblatt | 100 | Stepwise | exact solution | 0.06% | 48s |
-| Vanilla call | 1 | Standard | Black-Scholes closed form | 1.01% | 27s |
-| BS basket call | 5 | Stepwise | seeded MC (same payoff) | 0.62% | 27s |
-| BS basket call | 25 | Stepwise | seeded MC (same payoff) | 0.35% | 36s |
-| Hamilton-Jacobi-Bellman | 3 | Stepwise | Cole-Hopf MC (seeded) | 2.31% | 22s |
-| Hamilton-Jacobi-Bellman | 20 | Stepwise | Cole-Hopf MC (seeded) | 0.28% | 44s |
-| Hamilton-Jacobi-Bellman | 100 | Stepwise | Cole-Hopf MC (seeded) / published 4.5901 | 0.03% | 102s |
-| Allen-Cahn | 100 | Stepwise | published 0.052802 (branching diffusion) | 0.98% | 103s |
+| Black-Scholes-Barenblatt | 10 | Stepwise | exact solution | 0.11% | 14s |
+| Black-Scholes-Barenblatt | 50 | Stepwise | exact solution | 0.12% | 22s |
+| Black-Scholes-Barenblatt | 100 | Stepwise | exact solution | 0.06% | 32s |
+| Vanilla call | 1 | Standard | Black-Scholes closed form | 1.01% | 16s |
+| BS basket call | 5 | Stepwise | seeded MC (same payoff) | 0.62% | 15s |
+| BS basket call | 25 | Stepwise | seeded MC (same payoff) | 0.35% | 22s |
+| XVA call (Burgard-Kjaer) | 1 | Stepwise | closed form e^-cT * BS (MC cross-validated) | 0.18% | 16s |
+| Hamilton-Jacobi-Bellman | 3 | Stepwise | Cole-Hopf MC (seeded) | 2.31% | 15s |
+| Hamilton-Jacobi-Bellman | 20 | Stepwise | Cole-Hopf MC (seeded) | 0.28% | 28s |
+| Hamilton-Jacobi-Bellman | 100 | Stepwise | Cole-Hopf MC (seeded) / published 4.5901 | 0.03% | 68s |
+| Allen-Cahn | 100 | Stepwise | published 0.052802 (branching diffusion) | 0.98% | 65s |
 
 <sub>Seeded runs, CPU (arm), torch 2.14.0. Regenerate: `python benchmarks/run.py` (~10 min).</sub>
 <!-- BENCHMARK:END -->
@@ -160,7 +162,7 @@ Reproducible with one command — every row is a seeded run against an exact sol
 ### Known limitations (honest edition)
 
 - **Strongly nonlinear drivers with `StandardSolver`/`GlobalSolver`:** deriving $Z$ by autograd from the same network as $u$ under-weights quadratic-in-$Z$ drivers — those solvers plateau ~12-15% above the HJB reference. **Resolved in practice by `StepwiseSolver`** (2% at $d{=}3$, 0.03% at $d{=}100$); the derivative-coupled solvers keep the honest caveat since they're what you need for solution surfaces and greeks.
-- **XVA is now validated** (v0.2): `experiments/exp_xva.py`'s Deep BSDE price and CVA/DVA/FVA breakdown are tested against the classical Monte-Carlo oracle (itself verified against closed forms) — calibrated run: price 4.1% off, CVA 2.4%, FVA 0.7%, DVA correctly ~0. At-the-money delta is accurate; **far-from-spot greeks remain under-trained** — the full greeks surface arrives with the 0.3 promotion of XVA to a library equation backed by `GlobalSolver`.
+- **Single-network price surfaces are approximate.** Learning $u(t,S)$ across a wide moneyness range in one network hits a multi-scale loss floor (out-of-the-money wings are worth ~1000x less than in-the-money regions in squared error, and the terminal-gradient target is discontinuous at the strike). The accurate recipe is **anchored pointwise evaluation**: fix a `StepwiseSolver` at each spot you care about and read `predict()` / `delta0()` — validated for `XVAEquation` to delta error ≤0.011 across the full moneyness range (the v0.2 caveat this replaces measured 0.09).
 - **BS/BSB greeks plotting** (`experiments/experimental/greeks_viz.py`) stays experimental.
 
 ## Project Structure
@@ -202,6 +204,22 @@ Option pricing under uncertain volatility $\sigma \in [\sigma_{\min}, \sigma_{\m
 
 The LQG control benchmark $\partial_t u + \Delta u - \lambda \|\nabla u\|^2 = 0$ with the Cole-Hopf reference
 $u(t,x) = -\tfrac{1}{\lambda}\ln \mathbb{E}\left[\exp(-\lambda\, g(x + \sqrt{2}\, W_{T-t}))\right]$, implemented in-class with seedable Monte Carlo.
+
+#### XVA (Burgard-Kjaer)
+
+XVA-adjusted option pricing: $f_{xva}(V) = \lambda_c(1-R_c)V^+ - \lambda_b(1-R_b)V^- + (r_f-r)V$. For long options $V \ge 0$, so the driver linearizes exactly and $V(t,S) = e^{-c(T-t)}BS(t,S)$ is the in-class closed form (cross-validated against a classical Monte-Carlo XVA engine). Price and greeks at any spot:
+
+```python
+from deep_fbsde_nn.equations import XVAEquation
+from deep_fbsde_nn.solvers import StepwiseSolver, SolverConfig
+
+eq = XVAEquation(dimension=1, S0=80.0, strike=100.0)   # anchor at the query spot
+config = SolverConfig(batch_size=64, num_timesteps=20,
+                      num_iterations=3000, use_mlmc=False)
+solver = StepwiseSolver(eq, config)
+solver.train()
+price, delta = solver.predict().item(), solver.delta0().item()
+```
 
 ### Networks
 

@@ -347,6 +347,22 @@ class BaseSolver(ABC):
         self.training_history = ckpt.get("history", {})
         self.current_iteration = ckpt.get("iteration", 0)
 
+    def get_price_and_delta(self, t: float, X: torch.Tensor):
+        """Evaluate u(t, X) and its spatial gradient (delta) via autograd.
+
+        Works for any solver whose model is a plain u(t, x) network
+        (Standard/Global). StepwiseSolver has no u(t, x) surface and will
+        raise loudly through its model.
+        """
+        self.model.eval()
+        X = X.to(self.device).requires_grad_(True)
+        if X.dim() == 1:
+            X = X.unsqueeze(0)
+        t_tensor = torch.full((X.shape[0], 1), t, device=self.device)
+        u = self.model(torch.cat([t_tensor, X], dim=1))
+        delta = torch.autograd.grad(u.sum(), X)[0]
+        return u.detach(), delta.detach()
+
     def __repr__(self) -> str:
         n_params = sum(p.numel() for p in self.model.parameters())
         return (

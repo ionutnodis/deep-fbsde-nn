@@ -12,6 +12,7 @@ from .base import BaseEquation, EquationConfig
 from .black_scholes import BlackScholesEquation, VanillaCallEquation
 from .black_scholes_barenblatt import AllenCahnEquation, BlackScholesBarenblattEquation
 from .hjb import HJBEquation
+from .xva import XVAEquation
 
 __all__ = [
     "BaseEquation",
@@ -21,4 +22,5 @@ __all__ = [
     "AllenCahnEquation",
     "VanillaCallEquation",
     "HJBEquation",
+    "XVAEquation",
 ]
