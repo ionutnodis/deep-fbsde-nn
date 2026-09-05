@@ -9,17 +9,16 @@ tags:
   - quantitative finance
 authors:
   - name: Ionut Nodis
-    orcid: 0000-0000-0000-0000  # TODO: fill in before submission
+    orcid: 0009-0006-7368-7693
     affiliation: 1
 affiliations:
   - name: Independent researcher
     index: 1
-date: 2026-09-04  # updated at submission (post v0.2 — see docs/RELEASE-ANNOUNCEMENT.md)
+date: 2026-09-05
 bibliography: paper.bib
 ---
 
-<!-- JOSS draft, submission-ready with v0.2. Remaining TODO: the author's
-     ORCID in the frontmatter. Repository: github.com/ionutnodis/deep-fbsde-nn. -->
+<!-- JOSS submission-ready (v0.2). Repository: github.com/ionutnodis/deep-fbsde-nn. -->
 
 # Summary
 
