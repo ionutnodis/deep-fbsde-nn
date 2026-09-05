@@ -5,8 +5,8 @@ type: software
 authors:
   - family-names: Nodis
     given-names: Ionut
-version: 0.1.0
-date-released: 2026-09-04
+version: 0.2.0
+date-released: 2026-09-05
 license: MIT
 doi: 10.5281/zenodo.22311423
 repository-code: "https://github.com/ionutnodis/deep-fbsde-nn"

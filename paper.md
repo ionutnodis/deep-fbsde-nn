@@ -18,10 +18,8 @@ date: 2026-09-04  # updated at submission (post v0.2 — see docs/RELEASE-ANNOUN
 bibliography: paper.bib
 ---
 
-<!-- JOSS draft. Submission happens AFTER the v0.2 benchmark release so the
-     "how does this improve on existing packages?" question has a
-     quantitative answer. TODO before submission: ORCID, paper.bib,
-     benchmark numbers. Repository: github.com/ionutnodis/deep-fbsde-nn. -->
+<!-- JOSS draft, submission-ready with v0.2. Remaining TODO: the author's
+     ORCID in the frontmatter. Repository: github.com/ionutnodis/deep-fbsde-nn. -->
 
 # Summary
 
@@ -47,11 +45,16 @@ on GitHub in the same state. No installable, continuously tested library
 serves researchers who want to use, extend, or benchmark against the
 method rather than re-implement it. `deep-fbsde-nn` fills that gap with a
 lean core (torch and numpy only), CI that validates every equation with a
-known reference solution (exact solutions for Black-Scholes-Barenblatt and
-the single-asset call; a seedable Cole-Hopf Monte-Carlo reference for
-Hamilton-Jacobi-Bellman, checked both end-to-end and via a
-finite-difference PDE-residual test of the implemented driver), reproducible
-benchmarks, and archived, citable releases.
+known reference (exact solutions for Black-Scholes-Barenblatt and the
+single-asset call; the published branching-diffusion value 0.052802 for the
+canonical d=100 Allen-Cahn case; a seedable Cole-Hopf Monte-Carlo reference
+for Hamilton-Jacobi-Bellman, checked both end-to-end and via a
+finite-difference PDE-residual test of the implemented driver; a seeded
+Monte-Carlo benchmark for basket options), a one-command reproducible
+benchmark (11 seeded equation-by-dimension rows, nine below 1% relative
+error on CPU, including the published d=100 HJB value 4.5901 reproduced to
+0.03%), an XVA pricing example validated against a classical Monte-Carlo
+oracle, and archived, citable releases.
 
 # Acknowledgements
 
