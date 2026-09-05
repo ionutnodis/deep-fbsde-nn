@@ -14,7 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build draft PDF
-        uses: openjournals/openjournals-draft-action@master
+        # pinned to a commit SHA (mutable @master is a supply-chain risk); was master on 2026-09-05
+        uses: openjournals/openjournals-draft-action@85a18372e48f551d8af9ddb7a747de685fbbb01c
         with:
           journal: joss
           paper-path: paper.md
