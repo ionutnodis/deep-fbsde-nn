@@ -160,7 +160,8 @@ Reproducible with one command — every row is a seeded run against an exact sol
 ### Known limitations (honest edition)
 
 - **Strongly nonlinear drivers with `StandardSolver`/`GlobalSolver`:** deriving $Z$ by autograd from the same network as $u$ under-weights quadratic-in-$Z$ drivers — those solvers plateau ~12-15% above the HJB reference. **Resolved in practice by `StepwiseSolver`** (2% at $d{=}3$, 0.03% at $d{=}100$); the derivative-coupled solvers keep the honest caveat since they're what you need for solution surfaces and greeks.
-- **XVA and greeks are experimental**: quarantined under `experiments/experimental/` with runtime warnings; they need debugging and are not part of the tested surface.
+- **XVA is now validated** (v0.2): `experiments/exp_xva.py`'s Deep BSDE price and CVA/DVA/FVA breakdown are tested against the classical Monte-Carlo oracle (itself verified against closed forms) — calibrated run: price 4.1% off, CVA 2.4%, FVA 0.7%, DVA correctly ~0. At-the-money delta is accurate; **far-from-spot greeks remain under-trained** — the full greeks surface arrives with the 0.3 promotion of XVA to a library equation backed by `GlobalSolver`.
+- **BS/BSB greeks plotting** (`experiments/experimental/greeks_viz.py`) stays experimental.
 
 ## Project Structure
 
@@ -221,7 +222,7 @@ $u(t,x) = -\tfrac{1}{\lambda}\ln \mathbb{E}\left[\exp(-\lambda\, g(x + \sqrt{2}\
 
 All solvers integrate the BSDE as $\hat{Y}_{n+1} = Y_n - f\,\Delta t + Z_n^\top \sigma\, \Delta W_n$ — the same convention, tested. `StepwiseSolver` additionally warm-starts $Y_0$ at the driver-free value $\mathbb{E}[g(X_T)]$ and zero-initializes its $Z$-net outputs, which is what makes high-dimensional training stable without per-problem tuning.
 
-`SolverConfig` notes: `batch_size` defaults to 1, following the reference implementation this library was validated against; Han et al. (2018) used 64-256, and the default is being re-evaluated with benchmarks for 0.2 (see TODOS.md). The convergence tests use 16-64.
+`SolverConfig` notes: `batch_size` defaults to **16** (changed from 1 in v0.2 after an evidence sweep: strictly better accuracy at ~1.2x cost). Because `StandardSolver`'s loss sums over the batch, batch size scales the effective learning rate — with very large batches, lower `learning_rate` accordingly.
 
 ## Experiments
 
