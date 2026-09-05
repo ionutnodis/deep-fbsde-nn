@@ -25,4 +25,4 @@ Deferred work with context. Generated during /plan-eng-review of the v0.1 releas
 
 ### Benchmark-first 0.2 release — now also the launch event
 - **What:** One command regenerates an equation × dimension table of relative error + runtime, published in the README; loosened-tolerance version doubles as a regression suite (`python benchmarks/run.py`).
-- **Completed:** v0.2.0 (2026-09-05). The 0.3.0 release added the XVA row (12 rows, 10 under 1%).
+- **Completed:** v0.2.0 (2026-09-05). The 0.3.0 release added the XVA row (12 rows, 9 under 1%).

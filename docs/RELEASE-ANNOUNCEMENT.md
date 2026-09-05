@@ -8,7 +8,7 @@ plus working XVA. Decided in CEO review, 2026-09-04.
 ## Before announcing (checklist)
 
 - [x] Demand-evidence check (T21) — see summary below.
-- [x] v0.2 benchmark table in the README (11 rows, 9 under 1%).
+- [x] Benchmark table in the README (12 rows, 9 under 1%, incl. XVA at 0.18%).
 - [x] Hero figure current (seeded d=100 run, 2.31%).
 - [ ] Activate GitHub Discussions + post the seeded good-first-issues (fires with the announcement).
 - [ ] Submit the JOSS paper (benchmark = contribution evidence).
@@ -28,7 +28,7 @@ Watch for two weeks: PyPI downloads (pypistats.org/packages/deep-fbsde-nn),
 GitHub traffic (Insights → Traffic), stars/issues. These numbers size the
 0.3 investment.
 
-## Release note (final — v0.2 numbers)
+## Release note (final — v0.3 numbers)
 
 > **deep-fbsde-nn — a tested, citable PyTorch library for Deep BSDE methods**
 >
@@ -37,7 +37,7 @@ GitHub traffic (Insights → Traffic), stars/issues. These numbers size the
 > PyTorch library: `pip install deep-fbsde-nn`, core deps torch+numpy only.
 >
 > The receipts, reproducible with one command (`python benchmarks/run.py`):
-> an 11-row seeded benchmark across every shipped equation — 9 rows under 1%,
+> a 12-row seeded benchmark across every shipped equation — 9 rows under 1%,
 > including Han et al.'s published d=100 HJB value 4.5901 reproduced to
 > 0.03% and the d=100 Allen-Cahn branching-diffusion value to 0.98%, on a
 > laptop CPU. XVA pricing validated against a classical Monte-Carlo oracle.

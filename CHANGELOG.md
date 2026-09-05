@@ -27,7 +27,7 @@ The benchmark release: every equation validated, every number reproducible.
   value E[g(X_T)] and zero-initialized Z-net outputs.
 - **Benchmark harness** (`python benchmarks/run.py`): 11-row seeded
   equation × dimension table (rel. error + wall time), spliced into the
-  README. 9 of 11 rows under 1%.
+  README. 8 of 11 rows under 1%.
 - **Reference validation for every exported equation**, including the
   published branching-diffusion value for Allen-Cahn (0.052802 at d=100,
   reproduced to 0.98%) and a seeded MC benchmark for the BS basket (0.62%).
