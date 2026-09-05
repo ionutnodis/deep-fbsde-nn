@@ -1,0 +1,24 @@
+# Compiles the JOSS paper draft (paper.md + paper.bib) exactly as the journal
+# does, per their pre-submission checklist. Runs on demand and whenever the
+# paper changes; the compiled PDF is downloadable from the run's artifacts.
+name: JOSS draft PDF
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ["paper.md", "paper.bib"]
+
+jobs:
+  paper:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build draft PDF
+        uses: openjournals/openjournals-draft-action@master
+        with:
+          journal: joss
+          paper-path: paper.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paper
+          path: paper.pdf
