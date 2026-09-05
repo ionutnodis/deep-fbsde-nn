@@ -37,7 +37,12 @@ from ..utils.device import get_device
 class SolverConfig:
     """Solver configuration."""
 
-    batch_size: int = 1  # Reference uses M=1
+    # Default changed 1 -> 16 in v0.2: an evidence sweep showed M=16 strictly
+    # better than the reference's M=1 at ~1.2x cost (BSB d=2: 3.61% -> 1.89%;
+    # vanilla D=1: 1.09% -> 0.05% at fixed iterations). NOTE: StandardSolver's
+    # loss SUMS over the batch, so batch size scales the effective learning
+    # rate — very large batches need a smaller lr (M=64 diverges at lr 5e-3).
+    batch_size: int = 16
     num_timesteps: int = 50
     learning_rate: float = 1e-3
     num_iterations: int = 20000

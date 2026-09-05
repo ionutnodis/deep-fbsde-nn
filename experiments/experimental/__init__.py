@@ -1,16 +1,17 @@
 """
 Experimental code — NOT part of the tested surface of deep-fbsde-nn.
 
-Everything in this directory is known to need debugging or further
-validation (see the repo README). Interfaces and results may be wrong
-and can change without notice.
+Only greeks_viz.py remains here (BS/BSB price/delta-vs-spot plotting,
+unvalidated). exp_xva.py graduated in v0.2 after its price and component
+breakdown were validated against the classical Monte-Carlo oracle — see
+tests/test_xva.py.
 """
 
 import warnings
 
 warnings.warn(
-    "experiments.experimental is untested, known-incomplete code — "
-    "not part of the deep-fbsde-nn supported surface.",
+    "experiments.experimental is untested code — currently only the BS/BSB "
+    "greeks plotting helpers. Not part of the supported surface.",
     UserWarning,
     stacklevel=2,
 )

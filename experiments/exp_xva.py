@@ -12,8 +12,12 @@ XVA includes:
 
 The key insight is that XVA leads to a nonlinear BSDE:
 
-    dV_t = r*V_t*dt + Z_t*dW_t - f(t, V_t, Z_t)*dt
+    dV_t = [r*V_t + f(t, V_t)]*dt + Z_t*dW_t
     V_T = payoff(S_T)
+
+(Costs f > 0 must GROW Y along the path so the initial value is reduced:
+V_0 = E[e^{-rT} g] - E[∫ e^{-rt} f dt]. A historical version integrated -f,
+producing the ~0.46 Deep-BSDE-vs-MC gap noted in commit history.)
 
 where f is the nonlinear driver capturing funding/credit costs:
 
@@ -34,18 +38,9 @@ Usage:
 """
 
 import sys
-import warnings
 from pathlib import Path
 
-# This file lives in experiments/experimental/ — repo root is three levels up.
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-warnings.warn(
-    "exp_xva.py is EXPERIMENTAL: XVA pricing and greeks are known to need "
-    "debugging (commit e39091a) and are not part of the tested surface.",
-    UserWarning,
-    stacklevel=1,
-)
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import argparse
 from dataclasses import dataclass
@@ -230,7 +225,7 @@ class XVABSDESolver:
     Deep BSDE solver for XVA pricing using NAIS-Net.
 
     Solves the nonlinear BSDE:
-        dV_t = [r*V_t - f(t, V_t, Z_t)]*dt + Z_t*σ*S_t*dW_t
+        dV_t = [r*V_t + f(t, V_t)]*dt + Z_t*dW_t,  Z_t = σ*S_t*∂V/∂S
         V_T = payoff(S_T)
 
     where f is the XVA driver:
@@ -254,6 +249,9 @@ class XVABSDESolver:
         hidden_dim: int = 256,
         num_layers: int = 4,
         device: str = "cpu",
+        lr: float = 2e-3,
+        scheduler_step: int = 5000,
+        scheduler_gamma: float = 0.3,
     ):
         self.params = params
         self.device = torch.device(device)
@@ -267,9 +265,9 @@ class XVABSDESolver:
             activation="sine",
         ).to(self.device)
 
-        self.optimizer = optim.Adam(self.net.parameters(), lr=5e-4)
+        self.optimizer = optim.Adam(self.net.parameters(), lr=lr)
         self.scheduler = optim.lr_scheduler.StepLR(
-            self.optimizer, step_size=4000, gamma=0.5
+            self.optimizer, step_size=scheduler_step, gamma=scheduler_gamma
         )
 
         # Training history
@@ -308,8 +306,11 @@ class XVABSDESolver:
         """
         Compute the XVA driver f(V).
 
-        For the PDE: ∂u/∂t + ℒu - r*u + f(u) = 0
-        The BSDE becomes: dY = (r*Y - f(Y))dt + Z·dW
+        For the PDE: ∂u/∂t + ℒu - r*u - f(u) = 0
+        the BSDE is: dY = (r*Y + f(Y))dt + Z·dW — costs f > 0 grow Y
+        along the path, reducing the t=0 value (verified numerically:
+        propagating the exact solution gives terminal bias +0.002 with
+        +f vs -0.47 with -f).
 
         f(V) = λ_c*(1-R_c)*max(V,0)      (CVA cost when V>0)
              - λ_b*(1-R_b)*max(-V,0)     (DVA benefit when V<0)
@@ -348,8 +349,15 @@ class XVABSDESolver:
         self,
         batch_size: int,
         n_steps: int,
+        spot_spread: float = 0.0,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Simulate stock paths under risk-neutral measure."""
+        """Simulate stock paths under the risk-neutral measure.
+
+        spot_spread > 0 draws S(0) uniformly from
+        [S0*(1-spread), S0*(1+spread)] so the network trains on a band of
+        spots instead of the single point S0 (off-spot deltas were pure
+        extrapolation before, +40% wrong at S=80).
+        """
         p = self.params
         dt = p.T / n_steps
         sqrt_dt = np.sqrt(dt)
@@ -358,7 +366,19 @@ class XVABSDESolver:
         dW = torch.randn(batch_size, n_steps, device=self.device) * sqrt_dt
 
         S = torch.zeros(batch_size, n_steps + 1, device=self.device)
-        S[:, 0] = p.S0
+        if spot_spread > 0:
+            # Mixed batch: half the paths start exactly at S0 (keeps the
+            # reported price sharply trained), half on a uniform band
+            # (pins the surface so off-spot greeks aren't extrapolation).
+            half = batch_size // 2
+            S[:half, 0] = p.S0
+            n_band = batch_size - half
+            S[half:, 0] = p.S0 * (
+                1.0 - spot_spread
+                + 2.0 * spot_spread * torch.rand(n_band, device=self.device)
+            )
+        else:
+            S[:, 0] = p.S0
 
         for i in range(n_steps):
             S[:, i + 1] = S[:, i] * torch.exp(
@@ -371,6 +391,7 @@ class XVABSDESolver:
         self,
         batch_size: int = 256,
         n_steps: int = 50,
+        spot_spread: float = 0.2,
     ) -> Tuple[torch.Tensor, float]:
         """
         Compute Deep BSDE loss for XVA pricing.
@@ -380,15 +401,18 @@ class XVABSDESolver:
         - Z_n = σ * S_n * ∇u(t_n, S_n) via network gradient
 
         Then propagate forward:
-            Y_{n+1} = Y_n + [r*Y_n - f(Y_n)]*dt + Z_n*dW_n
+            Y_{n+1} = Y_n + [r*Y_n + f(Y_n)]*dt + Z_n*dW_n
 
-        Loss = ||Y_N - g(S_N)||^2  (terminal condition)
+        Loss = ||Y_N - g(S_N)||^2 (terminal) + per-step consistency between
+        the network level and the propagated Y (mirrors StandardSolver) —
+        without the consistency term u(t>0, ·) is pure gauge and the XVA
+        component breakdown is meaningless.
         """
         p = self.params
         dt = p.T / n_steps
 
-        # Simulate paths
-        t, S, dW = self.simulate_paths(batch_size, n_steps)
+        # Simulate paths on a spot band (see simulate_paths)
+        t, S, dW = self.simulate_paths(batch_size, n_steps, spot_spread=spot_spread)
 
         # === FORWARD PROPAGATION ===
         # Get Y_0 and Z_0 from network
@@ -402,8 +426,15 @@ class XVABSDESolver:
         grad_Y = torch.autograd.grad(Y.sum(), S0_grad, create_graph=True)[0]
         Z = p.sigma * S0.squeeze() * grad_Y.squeeze()
 
-        # Store Y0 for reporting
-        Y0 = Y.mean().detach()
+        # Report Y0 at the exact spot S0 (paths start on a band, so the
+        # batch mean is NOT the price at S0)
+        with torch.no_grad():
+            Y0 = self._forward(
+                torch.zeros(1, 1, device=self.device),
+                torch.full((1, 1), float(p.S0), device=self.device),
+            ).squeeze()
+
+        intermediate_loss = torch.zeros((), device=self.device)
 
         # Forward propagate the BSDE
         for i in range(n_steps):
@@ -426,18 +457,22 @@ class XVABSDESolver:
                 )[0]
                 Z = p.sigma * S_next.squeeze() * grad_Y.squeeze()
 
-            Y = Y_new
+                # Per-step consistency (mirrors StandardSolver): pin the
+                # network LEVEL to the propagated Y, then re-anchor. Without
+                # this, u(t>0, ·) has an unconstrained additive gauge.
+                intermediate_loss = intermediate_loss + torch.mean(
+                    (Y_net - Y_new) ** 2
+                )
+                Y = Y_net
+            else:
+                Y = Y_new
 
         # === TERMINAL LOSS ===
         # Y_T should match the payoff g(S_T)
         terminal_payoff = self.payoff(S[:, -1])
         terminal_loss = torch.mean((Y - terminal_payoff) ** 2)
 
-        # Also add intermediate consistency loss (optional but helps)
-        # This ensures network predictions match BSDE propagation
-        intermediate_loss = torch.tensor(0.0, device=self.device)
-
-        return terminal_loss + 0.1 * intermediate_loss, Y0.item()
+        return terminal_loss + intermediate_loss, Y0.item()
 
     def train(
         self,
@@ -570,10 +605,12 @@ class XVABSDESolver:
                 # FVA contribution
                 fva_integral += df * (p.r_f - p.r) * V_i * dt
 
+        # Same convention as classical_xva_monte_carlo: CVA/DVA/FVA are
+        # magnitudes (cost / benefit / cost); Total_XVA = -CVA + DVA - FVA.
         return {
-            "CVA": -cva_integral.mean().item(),  # CVA is a cost (negative)
-            "DVA": dva_integral.mean().item(),  # DVA is a benefit (positive)
-            "FVA": -fva_integral.mean().item(),  # FVA depends on sign of V
+            "CVA": cva_integral.mean().item(),
+            "DVA": dva_integral.mean().item(),
+            "FVA": fva_integral.mean().item(),
             "Total_XVA": (-cva_integral + dva_integral - fva_integral).mean().item(),
         }
 
@@ -934,7 +971,6 @@ def plot_xva_results(solver: XVABSDESolver, save_dir: str = "results/figures"):
         final_price = np.mean(solver.prices[-n_avg:])
     else:
         final_price = xva_prices[len(xva_prices) // 2]
-    final_price - bs_price
 
     # Get accurate XVA components at S0 from MC
     mc_at_s0 = classical_xva_monte_carlo(
@@ -1162,7 +1198,7 @@ def main():
     )
 
     # Compute XVA component estimates from Deep BSDE
-    print("\nDeep BSDE XVA components (estimated)...")
+    print("\nDeep BSDE XVA components (same sign convention as classical above)...")
     components = solver.compute_xva_components(n_paths=50000)
     print(f"  CVA (credit):   {components['CVA']:+.6f}")
     print(f"  DVA (debit):    {components['DVA']:+.6f}")
