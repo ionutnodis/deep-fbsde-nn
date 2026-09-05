@@ -67,3 +67,46 @@ def test_xva_price_and_components_match_classical_mc():
     assert abs(components["CVA"] - classical["CVA"]) / classical["CVA"] < 0.15, components
     assert abs(components["FVA"] - classical["FVA"]) / classical["FVA"] < 0.15, components
     assert components["CVA"] > 0 and components["FVA"] > 0, components
+
+
+def test_xva_equation_anchored_price_and_delta():
+    """The library-native XVA path (v0.3): anchor a StepwiseSolver at each
+    query spot and read predict() / delta0().
+
+    Every anchored run is its own well-scaled problem, so far-from-the-money
+    points are as accurate as at-the-money — this closes the 0.2 caveat
+    (delta at S=80 was +0.09 off in the bespoke experiment; anchored runs
+    measure <= 0.011 across S=75..130). Full five-point calibration lives in
+    the PR record; CI runs three points to stay inside the budget.
+    """
+    from deep_fbsde_nn.equations import XVAEquation
+    from deep_fbsde_nn.solvers import SolverConfig, StepwiseSolver
+
+    for spot in (75.0, 100.0, 130.0):
+        torch.manual_seed(0)
+        np.random.seed(0)
+        eq = XVAEquation(dimension=1, S0=spot, strike=100.0)
+        config = SolverConfig(
+            batch_size=64, num_timesteps=20, learning_rate=5e-3,
+            num_iterations=2000, use_mlmc=False, print_every=10**9,
+        )
+        solver = StepwiseSolver(eq, config, device="cpu", hidden_dim=32)
+        solver.train(n_iter=2000)
+        for group in solver.optimizer.param_groups:
+            group["lr"] = 1e-3
+        solver.train(n_iter=1000)
+
+        X = torch.tensor([[spot]])
+        price = solver.predict().item()
+        delta = solver.delta0().item()
+        exact_price = eq.exact_solution(0.0, X).item()
+        exact_delta = eq.exact_gradient(0.0, X).item()
+
+        # Calibrated: worst price 6.25% (deep OTM, 0.06 absolute), worst
+        # delta error 0.011 across the full range.
+        price_ok = (
+            abs(price - exact_price) / exact_price < 0.08
+            or abs(price - exact_price) < 0.1
+        )
+        assert price_ok, (spot, price, exact_price)
+        assert abs(delta - exact_delta) < 0.02, (spot, delta, exact_delta)

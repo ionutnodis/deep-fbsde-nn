@@ -9,6 +9,7 @@ from deep_fbsde_nn.equations import (
     BlackScholesEquation,
     HJBEquation,
     VanillaCallEquation,
+    XVAEquation,
 )
 
 M = 4  # batch size for shape checks
@@ -25,6 +26,7 @@ ALL_EQUATIONS = [
     AllenCahnEquation,
     VanillaCallEquation,
     HJBEquation,
+    XVAEquation,
 ]
 
 

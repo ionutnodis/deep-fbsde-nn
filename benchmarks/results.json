@@ -14,7 +14,7 @@
       "predicted": 1.1148301362991333,
       "reference": 1.0941741466522217,
       "rel_error_pct": 1.887815546557328,
-      "seconds": 5.451730000087991
+      "seconds": 4.831406916026026
     },
     {
       "equation": "Black-Scholes-Barenblatt",
@@ -24,7 +24,7 @@
       "predicted": 1.0929793119430542,
       "reference": 1.0941742658615112,
       "rel_error_pct": 0.10921056688498974,
-      "seconds": 15.208943167002872
+      "seconds": 13.676926915999502
     },
     {
       "equation": "Black-Scholes-Barenblatt",
@@ -34,7 +34,7 @@
       "predicted": 1.092913031578064,
       "reference": 1.0941742658615112,
       "rel_error_pct": 0.11526813623734952,
-      "seconds": 32.3830219169613
+      "seconds": 21.70156033313833
     },
     {
       "equation": "Black-Scholes-Barenblatt",
@@ -44,7 +44,7 @@
       "predicted": 1.094860315322876,
       "reference": 1.0941743850708008,
       "rel_error_pct": 0.06268929902163728,
-      "seconds": 47.94133829185739
+      "seconds": 31.567891207989305
     },
     {
       "equation": "Vanilla call",
@@ -54,7 +54,7 @@
       "predicted": 0.1029849424958229,
       "reference": 0.10403534770011902,
       "rel_error_pct": 1.0096618385165548,
-      "seconds": 27.44621791690588
+      "seconds": 16.416648667072877
     },
     {
       "equation": "BS basket call",
@@ -64,7 +64,7 @@
       "predicted": 0.29240328073501587,
       "reference": 0.2905882185258226,
       "rel_error_pct": 0.6246165857656614,
-      "seconds": 26.795961416093633
+      "seconds": 14.634415125008672
     },
     {
       "equation": "BS basket call",
@@ -74,7 +74,17 @@
       "predicted": 0.6549634337425232,
       "reference": 0.6572891452161489,
       "rel_error_pct": 0.3538338477902133,
-      "seconds": 36.17874233308248
+      "seconds": 21.811063874978572
+    },
+    {
+      "equation": "XVA call (Burgard-Kjaer)",
+      "dimension": 1,
+      "solver": "Stepwise",
+      "reference_kind": "closed form e^-cT * BS (MC cross-validated)",
+      "predicted": 10.20459270477295,
+      "reference": 10.22317886352539,
+      "rel_error_pct": 0.18180410418870535,
+      "seconds": 15.713609750149772
     },
     {
       "equation": "Hamilton-Jacobi-Bellman",
@@ -84,7 +94,7 @@
       "predicted": 0.8076547384262085,
       "reference": 0.7894011735916138,
       "rel_error_pct": 2.3123305925103637,
-      "seconds": 21.69149679201655
+      "seconds": 14.99694879190065
     },
     {
       "equation": "Hamilton-Jacobi-Bellman",
@@ -94,7 +104,7 @@
       "predicted": 2.9283013343811035,
       "reference": 2.9201934337615967,
       "rel_error_pct": 0.2776494367040194,
-      "seconds": 43.824225459015
+      "seconds": 27.670221667038277
     },
     {
       "equation": "Hamilton-Jacobi-Bellman",
@@ -104,7 +114,7 @@
       "predicted": 4.588785648345947,
       "reference": 4.59035062789917,
       "rel_error_pct": 0.03409281076942238,
-      "seconds": 102.07342291693203
+      "seconds": 68.41991983284242
     },
     {
       "equation": "Allen-Cahn",
@@ -114,7 +124,7 @@
       "predicted": 0.05228505656123161,
       "reference": 0.052802,
       "rel_error_pct": 0.9790224589378973,
-      "seconds": 102.90506341704167
+      "seconds": 65.00316375005059
     }
   ]
 }

@@ -1,6 +1,10 @@
 """
-XVA Pricing via Deep BSDE
-=========================
+XVA Pricing via Deep BSDE (standalone experiment)
+=================================================
+
+NOTE (v0.3): the library-native path is `deep_fbsde_nn.equations.XVAEquation`
++ `StepwiseSolver` (see README, "XVA (Burgard-Kjaer)"). This script remains
+as the standalone cross-validation harness against the classical MC engine.
 
 Pricing derivatives with valuation adjustments (XVA) using Deep BSDE.
 
