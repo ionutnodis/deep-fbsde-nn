@@ -10,10 +10,15 @@ XVA in the public API, and greeks that hold far from the money.
   cross-validated against the classical Monte-Carlo oracle) and analytic
   delta. Reduces exactly to `BlackScholesEquation` when adjustments vanish.
 - **`StepwiseSolver.delta0()`** and the anchored pointwise greeks recipe:
-  price + delta at any spot with uniform accuracy (delta error ≤0.011 across
-  S=75-130 for XVA — closing the v0.2 far-from-spot greeks caveat).
+  price + delta at any spot, with uniformly accurate deltas (error ≤0.011
+  across S=75-130 for XVA — closing the v0.2 far-from-spot greeks caveat).
 - `BaseSolver.get_price_and_delta` (generic autograd delta for u(t,x) solvers).
 - XVA row in the benchmark table.
+
+### Changed
+- Release pipeline hardening: the publish workflow now refuses a tag that
+  doesn't match the package version, and the PyPI publish action is pinned
+  by commit SHA in both OIDC jobs.
 
 ## 0.2.0 — 2026-09-05
 
