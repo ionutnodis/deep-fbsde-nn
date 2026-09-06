@@ -1,7 +1,7 @@
 <h1 align="center">Deep FBSDE Neural Networks</h1>
 
 <p align="center">
-<a href="https://github.com/ionutnodis/deep-fbsde-nn/actions/workflows/ci.yml"><img src="https://github.com/ionutnodis/deep-fbsde-nn/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+<a href="https://github.com/ionutnodis/deep-fbsde-nn/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://github.com/ionutnodis/deep-fbsde-nn/actions/workflows/ci.yml/badge.svg?branch=main&event=push" alt="CI"></a>
 <a href="https://pypi.org/project/deep-fbsde-nn/"><img src="https://img.shields.io/pypi/v/deep-fbsde-nn" alt="PyPI"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
 <a href="https://doi.org/10.5281/zenodo.22311423"><img src="https://zenodo.org/badge/1132717784.svg" alt="DOI"></a>
