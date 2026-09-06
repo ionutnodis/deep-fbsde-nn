@@ -80,7 +80,8 @@ assert result["relative_error"] < 5.0, "did not converge — please open an issu
 #
 # - `StandardSolver` / `GlobalSolver` learn the full surface $u(t,x)$
 #   (needed for greeks) — see the README's solver table for the trade-offs.
-# - Five equations ship validated against references:
-#   Black-Scholes(-Barenblatt), vanilla call, Allen-Cahn, HJB.
+# - Six equations ship validated against references:
+#   Black-Scholes(-Barenblatt), vanilla call, Allen-Cahn, HJB, and
+#   Burgard-Kjaer XVA.
 # - Reproduce the full benchmark: `python benchmarks/run.py` in a clone.
 # - Write your own equation in ~20 lines: README → "Extending the Library".
