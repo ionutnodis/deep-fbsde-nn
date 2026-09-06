@@ -89,6 +89,20 @@ Core: **Python ≥ 3.12**, `torch ≥ 2.0`, `numpy ≥ 1.24` — nothing else.
 
 The same example lives as a runnable, CI-tested script at [`examples/quickstart.py`](examples/quickstart.py) (`python examples/quickstart.py --dim 4 --iterations 500` for a laptop-scale run) — or **try it in one click on Colab** (badge above): the notebook is generated from a CI-executed [jupytext source](examples/quickstart_notebook.py), so it can't rot.
 
+### Playground notebooks
+
+Try the library before installing anything — every notebook pip-installs the
+package itself on a free Colab CPU, and each one is generated from a
+[jupytext](https://jupytext.readthedocs.io/) source that CI executes and
+checks against the committed notebook, so the code cannot silently rot.
+
+| Notebook | What you get | |
+|---|---|---|
+| **Quickstart** | Solve a 10-dimensional PDE and check it against the exact solution, in about a minute | [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ionutnodis/deep-fbsde-nn/blob/main/examples/quickstart_bsb.ipynb) |
+| **XVA playground** | Price with default risk and funding costs, read off hedge-quality deltas, and turn the XVA knobs against an exact closed form | [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ionutnodis/deep-fbsde-nn/blob/main/examples/xva_playground.ipynb) |
+| **Reproduce the paper** | Han-Jentzen-E's published d=100 HJB value (4.5901), graded against a Cole-Hopf Monte-Carlo reference you compute yourself | [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ionutnodis/deep-fbsde-nn/blob/main/examples/hjb_d100.ipynb) |
+| **Write your own equation** | A dividend-paying call in ~30 lines of `BaseEquation` subclass, validated against Merton's closed form | [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ionutnodis/deep-fbsde-nn/blob/main/examples/custom_equation.ipynb) |
+
 ```python
 from deep_fbsde_nn.equations import BlackScholesBarenblattEquation
 from deep_fbsde_nn.networks import NAISNet
@@ -175,7 +189,7 @@ deep-fbsde-nn/
 │   ├── solvers/             # StandardSolver (fixed X0), GlobalSolver (distributed X0), StepwiseSolver (per-step Z-nets)
 │   └── utils/               # device, metrics, checkpointing
 ├── tests/                   # pytest suite (fast + slow-marked convergence)
-├── examples/quickstart.py   # CI-tested quickstart (+ Colab notebook)
+├── examples/                # CI-tested quickstart script + 4 Colab notebooks
 ├── benchmarks/              # seeded benchmark harness (python benchmarks/run.py)
 ├── experiments/             # research scripts (need the [experiments] extra)
 │   └── experimental/        # greeks plotting — experimental, warns at import

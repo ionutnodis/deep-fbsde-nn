@@ -29,13 +29,51 @@ jobs:
         run: ruff check .
       - name: Fast test suite
         run: pytest -m "not slow" -q
-      - name: Execute quickstart notebook
-        # Regenerated from the jupytext source of truth and executed —
-        # the committed .ipynb (for Colab) can never silently rot.
+      - name: Execute example notebooks
+        # Regenerated from the jupytext sources of truth and executed —
+        # the committed .ipynb files (for Colab) can never silently rot.
+        # NB_FAST=1 selects a notebook's small/fast setting where it has
+        # one (the quickstart ignores it); full settings are what Colab
+        # users run.
         run: |
           pip install -q jupytext nbclient ipykernel
-          jupytext --to ipynb examples/quickstart_notebook.py -o /tmp/quickstart.ipynb
-          jupyter execute --kernel_name=python3 /tmp/quickstart.ipynb
+          for nb in examples/*_notebook.py; do
+            out="/tmp/$(basename "${nb%_notebook.py}").ipynb"
+            jupytext --to ipynb "$nb" -o "$out"
+            NB_FAST=1 jupyter execute --kernel_name=python3 "$out"
+          done
+      - name: Committed Colab notebooks match their sources
+        # The execute step above proves the SOURCES work; this proves the
+        # committed .ipynb twins (what Colab actually opens) are the same
+        # cells — an edited source without a regenerated notebook fails here.
+        run: |
+          python - <<'PY'
+          import json
+          import sys
+
+          import jupytext
+
+          pairs = {
+              "examples/quickstart_notebook.py": "examples/quickstart_bsb.ipynb",
+              "examples/xva_playground_notebook.py": "examples/xva_playground.ipynb",
+              "examples/hjb_d100_notebook.py": "examples/hjb_d100.ipynb",
+              "examples/custom_equation_notebook.py": "examples/custom_equation.ipynb",
+          }
+          stale = []
+          for src, twin in pairs.items():
+              want = [(c.cell_type, c.source) for c in jupytext.read(src).cells]
+              have = [
+                  (c["cell_type"], "".join(c["source"]))
+                  for c in json.load(open(twin))["cells"]
+              ]
+              if want != have:
+                  stale.append(f"{twin} != {src}")
+          if stale:
+              print("Stale committed notebooks (regenerate with jupytext --to ipynb):")
+              print("\n".join(stale))
+              sys.exit(1)
+          print(f"{len(pairs)} committed notebooks match their sources")
+          PY
 
   package:
     # Packaging E2E: build -> twine check -> clean-venv wheel install -> import
