@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Three Colab playground notebooks** (each generated from a CI-executed
+  jupytext source, like the quickstart): an XVA pricing playground with
+  anchored deltas and closed-form scenario knobs; a reproduction of the
+  Han-Jentzen-E (2018) published d=100 HJB value graded against an
+  independent Cole-Hopf Monte-Carlo reference; and a write-your-own-equation
+  tutorial (dividend-yield call in ~30 lines, validated against Merton's
+  closed form). The README gains a notebooks table.
+
 ## 0.3.0 — 2026-09-05
 
 XVA in the public API, and greeks that hold far from the money.

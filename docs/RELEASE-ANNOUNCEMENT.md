@@ -41,7 +41,9 @@ GitHub traffic (Insights → Traffic), stars/issues. These numbers size the
 > including Han et al.'s published d=100 HJB value 4.5901 reproduced to
 > 0.03% and the d=100 Allen-Cahn branching-diffusion value to 0.98%, on a
 > laptop CPU. XVA pricing validated against a classical Monte-Carlo oracle.
-> One-click Colab quickstart, executed in CI so it can't rot. DOI for citation.
+> Four one-click Colab playgrounds (quickstart, an XVA pricing desk,
+> reproduce-the-paper, write-your-own-equation), all executed in CI so they
+> can't rot. DOI for citation.
 >
 > Built from a CQF final project on the stability-conditioned NAIS-Net
 > variant of Güler, Laignelet & Parpas (2019). Honest caveats in the README

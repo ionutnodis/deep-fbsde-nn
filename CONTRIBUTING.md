@@ -39,3 +39,5 @@ Every code path needs a test. Correctness claims need a reference: an exact solu
 ## Releases (maintainer)
 
 Tag `v*` → CI runs the slow suite → `publish.yml` builds, dry-runs on TestPyPI, publishes to PyPI via trusted publishing → Zenodo archives the release. `publish.yml` fails fast if the tag doesn't match `pyproject.toml`'s version, so bump the version (and `CITATION.cff`) before tagging. Regenerate the hero figure (`python experiments/make_hero_figure.py`) before tagging.
+
+The Colab notebooks in `examples/` self-install from PyPI, so on `main` they must only use API that the **latest released wheel** already has — land notebook changes that need new API together with (or after) the release that ships it.
