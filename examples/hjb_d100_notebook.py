@@ -79,7 +79,7 @@ reference = equation.exact_solution(
 ).item()
 print(f"Cole-Hopf Monte-Carlo reference (d={DIM}, {N_MC:,} paths): {reference:.4f}")
 if DIM == 100:
-    print(f"published value (Han, Jentzen & E 2018):                  4.5901")
+    print("published value (Han, Jentzen & E 2018):                  4.5901")
 
 # %% [markdown]
 # ## Train the solver
